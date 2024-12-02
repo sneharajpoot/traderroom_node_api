@@ -83,7 +83,36 @@ const  getUsersOpenTrade = async (lstAccount) => {
 }
  
 
-module.exports = { getUserInfo,  getUsersOpenTrade, getOpenTrade };
+const GetOpenTrade = async (MT5Accont) =>{
+    //GetOpenTrade?MT5Accont={MT5Accont}
+    
+    // const  getUsersOpenTrade = async (lstAccount) => {
+        try {
+            // API URL
+            const url = `${rootUrl}/GetOpenTrade`; // Replace with your actual API URL
+    
+            // Request headers
+            const headers = {
+                'x-token': '1000', // Replace with your x-token value
+                'type':1,
+                'Content-Type': 'application/json'
+            };
+    
+            // Request params (if lstAccount is a list of account numbers)
+            const queryParams = `?MT5Accont=${MT5Accont }`;
+    
+            // Make the GET request
+            const response = await axios.get(url + queryParams, { headers });
+    
+            // Log and return the response
+            console.log('API Response:', response.data);
+            return response.data;
+        } catch (error) {
+            console.error('Error calling GetUserInfoAll API:', error.message);
+            throw error;
+        }
+    }
+module.exports = { getUserInfo,  getUsersOpenTrade, getOpenTrade, GetOpenTrade };
 
 // Example usage
 // (async () => {

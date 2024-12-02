@@ -127,9 +127,9 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
         let Accounts = row.map(data => data.Account)
 
         let info = await trApi.getUsersOpenTrade(Accounts);
+        // let info = await trApi.getUsersOpenTrade([204728]);
+        return info.lstOPEN ||[] ; // Return the result
 
-
-        return { info }; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
@@ -208,4 +208,17 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
     }
 }
 
-module.exports = { getRecursiveData, getOpenTradeByUsers, getOpenTrade, getTransaction };
+const GetOpenTrade = async (MT5Accont) =>{
+
+    try{
+        
+        let info = await trApi.GetOpenTrade(MT5Accont);
+ 
+
+        return { info  }; // Return the result
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        throw err;
+    }
+}
+module.exports = { getRecursiveData, getOpenTradeByUsers, getOpenTrade, getTransaction, GetOpenTrade };
