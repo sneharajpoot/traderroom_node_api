@@ -33,14 +33,15 @@ const getRecursiveData = async (traderId, page = 1, limit = 10) => {
         const result = await pool.request().query(sql);
 
         let row = result.recordset;
-        // let Accounts = row.map(data => data.Account)
-        let Accounts = [609289, 609356]
+        let Accounts = row.map(data => data.Account)
+        // let Accounts = [609289, 609356]
 
         // console.log('--Accounts>', Accounts)
 
         // let info = await getUserInfo(Accounts );
         let info = await trApi.getUserInfo(Accounts);
 
+        console.log("Trader Account: ", info)
 
         let sql1 = `  SELECT  MT5Account,
         SUM(CASE WHEN Deposit_Withdraw = 0 THEN Amount ELSE 0 END) AS Total_Deposit,
@@ -69,10 +70,10 @@ const getRecursiveData = async (traderId, page = 1, limit = 10) => {
                 Level: data.Level,
                 Account: data.Account,
 
-                Balance: data.livedata.Balance,
-                Commission: data.livedata.Commission,
-                Credit: data.livedata.Credit,
-                Profit: data.livedata.Profit,
+                Balance: data.livedata?.Balance || 0,
+                Commission: data.livedata?.Commission || 0,
+                Credit: data.livedata?.Credit || 0,
+                Profit: data.livedata?.Profit || 0,
 
                 Total_Deposit: data.DW_Data?.Total_Deposit || 0,
                 Total_Withdraw: data.DW_Data?.Total_Withdraw || 0
@@ -126,10 +127,13 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
         let row = result.recordset;
         let Accounts = row.map(data => data.Account)
 
+        
+        console.log("Trader Accounts: ", Accounts)
         let info = await trApi.getUsersOpenTrade(Accounts);
         // let info = await trApi.getUsersOpenTrade([204728]);
-        return info.lstOPEN ||[] ; // Return the result
 
+
+        return info.lstOPEN ||[] ; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
