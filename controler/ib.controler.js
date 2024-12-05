@@ -129,7 +129,8 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
 
         
         console.log("Trader Accounts: ", Accounts)
-        let info = await trApi.getUsersOpenTrade(Accounts);
+        //let info = await trApi.getUsersOpenTrade(Accounts);
+        let info = await trApi.getUsersOpenTradeNew(Accounts);
         // let info = await trApi.getUsersOpenTrade([204728]);
 
 
@@ -140,8 +141,23 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
     }
 }
 
+const getOpenTradeByUsersNew = async (Accounts) => {
+    try { 
 
-const getOpenTrade = async (Accounts, page = 1, limit = 10) => {
+        
+        console.log("Trader Accounts: ", Accounts)
+        let info = await trApi.getUsersOpenTradeNew(Accounts.split(','));
+        // let info = await trApi.getUsersOpenTrade([204728]); 609301
+
+
+        return info  ; // Return the result
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        throw err;
+    }
+}
+
+const getOpenTrade = async (Accounts) => {
     try {
 
         let info = await trApi.getOpenTrade(Accounts);
@@ -212,6 +228,28 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
     }
 }
 
+const getTransactionByuser = async (Account, page = 1, limit = 10) => {
+    try {
+        const pool = await poolPromise; // Connect to the database
+ 
+
+        let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account = ${Account}  ORDER BY ID 
+            OFFSET ${(page - 1) * limit} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
+
+          console.log('lodas', sql1);
+
+        let info = await pool.request().query(sql1 );
+        let dataTran = info.recordset;
+        console.log("dataTran", dataTran)
+ 
+
+        return dataTran ; // Return the result
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        throw err;
+    }
+}
+
 const GetOpenTrade = async (MT5Accont) =>{
 
     try{
@@ -219,10 +257,10 @@ const GetOpenTrade = async (MT5Accont) =>{
         let info = await trApi.GetOpenTrade(MT5Accont);
  
 
-        return { info  }; // Return the result
+        return  info  ; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
     }
 }
-module.exports = { getRecursiveData, getOpenTradeByUsers, getOpenTrade, getTransaction, GetOpenTrade };
+module.exports = { getRecursiveData, getOpenTradeByUsers, getOpenTrade, getTransaction, getTransactionByuser, GetOpenTrade, getOpenTradeByUsersNew };
