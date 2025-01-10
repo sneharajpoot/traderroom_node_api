@@ -145,4 +145,26 @@ router.get("/get-open-trades", async (req, res) => {
       .send({ result: true, message: error.message || error });
   }
 });
+
+// dashboard Data 
+
+router.get("/get-dashboard-data", async (req, res) => {
+  
+  try {
+
+    let result = await ibControler.getDashboardData()
+
+    res.status(200).json({ result: true, message: "ib ", data: result });
+
+  } catch (error) {
+
+    console.error(
+      "error: Account Trade",
+      error.message || "Error adding aircraft"
+    );
+    return res
+      .status(500)
+      .send({ result: true, message: error.message || error });
+  }
+})
 module.exports = router;

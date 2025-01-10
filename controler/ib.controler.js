@@ -127,14 +127,14 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
         let row = result.recordset;
         let Accounts = row.map(data => data.Account)
 
-        
+
         console.log("Trader Accounts: ", Accounts)
         //let info = await trApi.getUsersOpenTrade(Accounts);
         let info = await trApi.getUsersOpenTradeNew(Accounts);
         // let info = await trApi.getUsersOpenTrade([204728]);
 
 
-        return info.lstOPEN ||[] ; // Return the result
+        return info.lstOPEN || []; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
@@ -142,15 +142,15 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
 }
 
 const getOpenTradeByUsersNew = async (Accounts) => {
-    try { 
+    try {
 
-        
+
         console.log("Trader Accounts: ", Accounts)
         let info = await trApi.getUsersOpenTradeNew(Accounts.split(','));
         // let info = await trApi.getUsersOpenTrade([204728]); 609301
 
 
-        return info  ; // Return the result
+        return info; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
@@ -206,7 +206,7 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
 
         let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account IN (${Accounts}) ;`
 
-        let info = await pool.request().query(sql1 );
+        let info = await pool.request().query(sql1);
         // console.log('info', info.recordset)
 
 
@@ -214,14 +214,14 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
         let dataTran = info.recordset;
 
         dataTran = dataTran.map((data, index) => {
-        let data1 = row.find(d => d.Account == data.MT5Account)
-            
-        data.Name = data1.Name;
-        data.Referral_Code = data1.Referral_Code;
-        return data;
+            let data1 = row.find(d => d.Account == data.MT5Account)
+
+            data.Name = data1.Name;
+            data.Referral_Code = data1.Referral_Code;
+            return data;
         })
 
-        return    dataTran ; // Return the result
+        return dataTran; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
@@ -231,36 +231,118 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
 const getTransactionByuser = async (Account, page = 1, limit = 10) => {
     try {
         const pool = await poolPromise; // Connect to the database
- 
+
 
         let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account = ${Account}  ORDER BY ID 
             OFFSET ${(page - 1) * limit} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
 
-          console.log('lodas', sql1);
+        console.log('lodas', sql1);
 
-        let info = await pool.request().query(sql1 );
+        let info = await pool.request().query(sql1);
         let dataTran = info.recordset;
         console.log("dataTran", dataTran)
- 
 
-        return dataTran ; // Return the result
+
+        return dataTran; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
     }
 }
 
-const GetOpenTrade = async (MT5Accont) =>{
+const GetOpenTrade = async (MT5Accont) => {
 
-    try{
-        
+    try {
+
         let info = await trApi.GetOpenTrade(MT5Accont);
- 
 
-        return  info  ; // Return the result
+
+        return info; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;
     }
 }
-module.exports = { getRecursiveData, getOpenTradeByUsers, getOpenTrade, getTransaction, getTransactionByuser, GetOpenTrade, getOpenTradeByUsersNew };
+
+
+const getDashboardData = async () => {
+    try {
+        const pool = await poolPromise; // Connect to the database
+
+
+        // Upload Kyc
+        // Withdraw Request
+        // Deposit Request
+        // Profile Request
+
+
+        // PENDING = 0, APPROVED = 1, REJECTED = 2, HOLD = 3, UPLOADED = 4
+        let kycStatus = ['PENDING', 'APPROVED', 'REJECTED', 'HOLD', 'UPLOADED']
+        // select COUNT(Trader_Id) as total ,Kyc_Status from [dbo].[Profiles]  GROUP BY Kyc_Status;
+
+
+        //  -- PENDING = 0, APPROVED = 1, REJECTED = 2, HOLD = 3
+        const paymentStatus = ['PENDING', 'APPROVED', 'REJECTED', 'HOLD']
+        // select COUNT(ID) as total_count from [dbo].[Wallet_AutoManualPayment] where Deposit_Withdraw = 0 and Status = 0;
+        // select COUNT(ID) as total_count from [dbo].[Wallet_AutoManualPayment] where Deposit_Withdraw = 1 and Status = 0;
+
+        let sql1 = `select COUNT(Trader_Id) as total ,Kyc_Status from [dbo].[Profiles]  GROUP BY Kyc_Status;`;
+        let sql2 = `select COUNT(ID) as total_count, Deposit_Withdraw ,Status from [dbo].[Wallet_AutoManualPayment]   GROUP BY Deposit_Withdraw ,Status;`;
+        let sql3 = `select SUM(amount) as total_deposit from [dbo].[Wallet_AutoManualPayment]   where Deposit_Withdraw = 0  and Status = 1;`;
+        let sql4 = `select SUM(amount) as total_Withdraw from [dbo].[Wallet_AutoManualPayment]   where Deposit_Withdraw = 1  and Status = 1;`;
+
+        let profiles = pool.request().query(sql1);
+        // let kycStatusCount = profiles.recordset;
+
+        let payments = pool.request().query(sql2);
+        // let paymentsCount = payments.recordset;
+        
+        let totalDeposit = pool.request().query(sql3);
+        //  totalDeposit = totalDeposit.recordset;
+        
+        let totalWithdraw = pool.request().query(sql4);
+        // totalWithdraw = payments.recordset;
+
+        let resData = await Promise.allSettled([profiles, payments, totalDeposit, totalWithdraw ]);
+        
+        let kycStatusCount = resData[0].value.recordset;
+        let paymentsCount = resData[1].value.recordset;
+        totalDeposit = resData[2].value.recordset[0].total_deposit;
+        totalWithdraw = resData[3].value.recordset[0].total_Withdraw; 
+
+        
+        kycStatusCount = kycStatusCount.map(data => {
+            data.Kyc_Status = kycStatus[data.Kyc_Status]
+            return data;
+        });
+
+        paymentsCount = paymentsCount.map(data => {
+            data.Deposit_Withdraw = data.Deposit_Withdraw ? 'Withdraw':'Deposit'
+            data.Status = paymentStatus[data.Status]
+
+            return data;
+        })
+
+        // return { paymentsCount, kycStatusCount }; // Return the result
+        // console.log("paymentsCount", paymentsCount, kycStatusCount )
+        // dataTran [
+        //        { total: 18, Kyc_Status: 0 },
+        //        { total: 325, Kyc_Status: 1 },
+        //        { total: 3, Kyc_Status: 2 },
+        //        { total: 1, Kyc_Status: 4 }
+        //      ]
+        //      paymentsCount [
+        //        { total_count: 166, Deposit_Withdraw: 0, Status: 0 }, 
+        //        { total_count: 602, Deposit_Withdraw: 0, Status: 1 }, 
+        //        { total_count: 5, Deposit_Withdraw: 1, Status: 0 },   
+        //        { total_count: 46, Deposit_Withdraw: 0, Status: 2 },  
+        //        { total_count: 90, Deposit_Withdraw: 1, Status: 1 }   
+        //      ]
+
+        return  {kycStatusCount, paymentsCount, totalDeposit, totalWithdraw}; // Return the result
+    } catch (err) {
+        console.error('Error executing query:', err.message);
+        throw err;
+    }
+}
+module.exports = { getDashboardData, getRecursiveData, getOpenTradeByUsers, getOpenTrade, getTransaction, getTransactionByuser, GetOpenTrade, getOpenTradeByUsersNew };
