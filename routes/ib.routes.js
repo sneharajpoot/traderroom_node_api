@@ -1,4 +1,4 @@
-const ibControler = require('../controler/ib.controler');
+const ibControler = require('../controller/ib.controller.js');
 
 const express = require("express");
 
