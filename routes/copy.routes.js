@@ -4,68 +4,102 @@ const express = require('express');
 const router = express.Router();
 const copyController = require('../controller/copy.controller.js');
 
-// Route to add manager
-router.post('/home/AddMng', async (req, res) => {
+// Route to add managers
+router.post('/copy/AddMng', async (req, res) => {
     try {
-        const result = await copyController.addManager(req.body);
-        res.status(200).json(result);
+        const resultM = await copyController.addManager(req.body);
+        res.status(200).json({ Message: 'Manager Added Successfully for copy', result:true ,  response: resultM});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// Route to generate token
-router.post('/home/token', async (req, res) => {
-    try {
-        const result = await copyController.generateToken(req.body);
-        res.status(200).json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Route to login manager
-router.post('/home/managerLogin', async (req, res) => {
+router.get('/copy/managerLogin', async (req, res) => {
     try {
-        const result = await copyController.managerLogin(req.body);
-        res.status(200).json(result);
+        const result = await copyController.managerLogin();
+        res.status(200).json({result:true ,Message: 'Manager Login Successfully for copy', response: result});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 // Route to add master
-router.post('/home/addMaster', async (req, res) => {
+router.post('/copy/addMaster', async (req, res) => {
     try {
         const result = await copyController.addMaster(req.body);
-        res.status(200).json(result);
+        res.status(200).json({result:true ,Message: 'Master Added Successfully for copy', response: result});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 // Route to remove master
-router.post('/home/removeMaster', async (req, res) => {
+router.post('/copy/removeMaster', async (req, res) => {
     try {
         const result = await copyController.removeMaster(req.body);
-        res.status(200).json(result);
+        res.status(200).json({ result:true ,Message: 'Master Removed Successfully for copy', response: result});
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
 // Route to add user
-router.post('/home/addUser', async (req, res) => {
+router.post('/copy/addUser', async (req, res) => {
     try {
-        const result = await copyController.addUser(req.body);
+        const result = await copyController.addSlave(req.body);
+        res.status(200).json({result:true ,Message: 'User Added Successfully for copy', response: result});
+    } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result:false, Message: error.message });
+    }
+});
+
+// Route to   resetDB
+router.post('/copy/resetDB', async (req, res) => {
+    try {
+        const result = await copyController.resetDB(req.body);
         res.status(200).json(result);
     } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result:false, Message: error.message });
+    }
+});
+// Route to   getManagerDetails
+router.get('/copy/getManagerDetails', async (req, res) => {
+    try {
+        const result = await copyController.getManagerDetails();
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('error', error.message);
         res.status(500).json({ error: error.message });
+    }
+});
+// Route to   getMasterDetails
+router.get('/copy/getMasterDetails', async (req, res) => {
+    try {
+        const result = await copyController.getMasterDetails( );
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result:true,Message: error.message });
+    }
+});
+
+// Route to   getSlaveDetails
+router.get('/copy/getSlaveDetails', async (req, res) => {
+    try {
+        const result = await copyController.getSlaveDetails(req.query.MasterId );
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result:false,Message: error.message });
     }
 });
 
 // Route to open trade
-router.post('/home/opentrade', async (req, res) => {
+router.post('/copy/opentrade', async (req, res) => {
     try {
         const result = await copyController.openTrade(req.body);
         res.status(200).json(result);
@@ -75,7 +109,7 @@ router.post('/home/opentrade', async (req, res) => {
 });
 
 // Route to close order
-router.post('/home/closeOrder', async (req, res) => {
+router.post('/copy/closeOrder', async (req, res) => {
     try {
         const result = await copyController.closeOrder(req.body);
         res.status(200).json(result);
@@ -85,7 +119,7 @@ router.post('/home/closeOrder', async (req, res) => {
 });
 
 // Route to check manager login and add manager if not found
-router.post('/home/ensureManager', async (req, res) => {
+router.post('/copy/ensureManager', async (req, res) => {
     try {
         const loginResult = await copyController.managerLogin(req.body);
         res.status(200).json(loginResult);

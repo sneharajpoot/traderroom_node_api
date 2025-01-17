@@ -1,6 +1,8 @@
 // copy.controller.js
 
-const { removeManager, addManager, generateToken, loginManager, addMaster, removeMaster, addUser, openTrade, closeOrder, removeUser, updateUser, getUsers, updatePriceTime, getAppLog, getAPILog } = require('../copy/api.js');
+const { resetDB, removeManager, addManager, getMasters, generateToken, loginManager, addMaster, removeMaster, addUser, openTrade, closeOrder, removeUser, updateUser, getUsers, updatePriceTime, getAppLog, getAPILog } = require('../copy/api.js');
+
+const { sql, poolPromise } = require('../db');
 
 /**
  * URL: http://<host>:<port>//home/AddMng
@@ -12,10 +14,86 @@ const { removeManager, addManager, generateToken, loginManager, addMaster, remov
  * Note: Before adding new manager account, remove the previous account.
  */
 exports.addManager = async (data) => {
-    return await addManager(data.mngId, data.serverIp, data.pasword);
+    try {
+
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        console.log("data", data)
+
+        // Retrieve manager details from the database
+        const managerDetails = await request.query(`
+        SELECT TOP 1 [ManagerId], [ServerConfig], [Password], [Active], [ServerName]
+        FROM [dbo].[MT5_Manager]
+        WHERE [ManagerId] = ${data.ManagerId}
+    `);
+
+        if (managerDetails.recordset.length === 0) {
+            throw new Error("Manager details not found");
+        }
+
+        // const manager = managerDetails.recordset[0];
+        // console.log("managerDetails", manager)
+
+        const manager = {
+            "ServerName": "Demo Server",
+            "ManagerId": 10033,
+            "ServerConfig": "176.126.66.21:443",
+            "Password": "September@2024"
+
+        }
+
+        // Insert data into the database before calling addManager
+        let addMng = await request.query(`
+        INSERT INTO [dbo].[Copy_Add_Manager]
+            (TraderId,[Name], [Mt5MngId], [MngId], [ServerIp], [Pasword], [Result], [Useid], [Password], [CreateBy], [CreatedDate], [UpdateDate])
+        VALUES
+            (0,'${manager.ServerName}', ${manager.ManagerId}, ${manager.ManagerId}, '${manager.ServerConfig}', '${manager.Password}', '', 0, '', '', GETDATE(), GETDATE())
+    `);
+        console.log("addMng", addMng.rowsAffected)
+
+        /**
+         * result = {
+        "result": "Token userid/password",
+        "useid": 10033,
+        "password": "LKq7EGHsMXIfV0osLs2M4g=="
+    }
+         */
+        const result = await addManager(manager.ManagerId, manager.ServerConfig, manager.Password);
+
+        console.log("result", result)
+        // Update the result in the database after calling addManager
+        let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET 
+        [Result] = '${result.result}',  Useid = '${result.useid}',  [Password] = '${result.password}'
+        WHERE [MngId] = ${manager.ManagerId} AND [ServerIp] = '${manager.ServerConfig}' `;
+        let updatMng = await request.query(usql);
+
+        console.log("updatMng", updatMng)
+
+        return result;
+    } catch (error) {
+        console.log("error", error)
+        throw new Error(error.message || "Error while adding manager");
+
+    }
 };
+// get list of manage details db  and from api 
+exports.getManagerDetails = async () => {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    // Retrieve manager details from the database
+    const managerDetails = await request.query(` SELECT * FROM [Copy_Add_Manager] `);
+
+    if (managerDetails.recordset.length === 0) {
+        throw new Error("Manager details not found");
+    }
+
+    const manager = managerDetails.recordset;
 
 
+    return { managerDB: manager };
+};
 exports.removeManager = async (data) => {
     return await removeManager(data.mngId, data.serverIp, data.pasword);
 };
@@ -37,8 +115,56 @@ exports.generateToken = async () => {
  * Input: { "mngId": 0 }
  * mngId -> int (MT5 manager Account id)
  */
-exports.managerLogin = async (data) => {
-    return await loginManager(data.mngId);
+exports.managerLogin = async () => {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    // console.log("data", data)
+
+    // Retrieve manager details from the database
+    const managerDetails = await request.query(`
+    SELECT TOP 1 [ManagerId], [ServerConfig], [Password], [Active], [ServerName]
+    FROM [dbo].[MT5_Manager] 
+`);
+
+    if (managerDetails.recordset.length === 0) {
+        throw new Error("Manager details not found");
+    }
+
+    const manager = managerDetails.recordset[0];
+    console.log("managerDetails", manager)
+
+    // return await loginManager(manager.ManagerId);
+    return await loginManager(10033);
+};
+
+// get list of manage details db  and from api 
+exports.getSlaveDetails = async (MasterId) => {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    // Retrieve Master details from the database
+    const slaveDetails = await request.query(` SELECT  * FROM  Copy_Slave `);
+
+    if (slaveDetails.recordset.length === 0) {
+        throw new Error("Slave details not found");
+    }
+
+    const slave = slaveDetails.recordset;
+
+    return { slaveDB: slave };
+};
+
+exports.resetDB = async () => {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    // truncate table before reset
+    const reseTbl = await request.query(`  truncate table [Copy_Slave]; truncate table [Copy_Add_Manager];
+ truncate table [Copy_Master]; truncate table [Copy_Master_Performance]`)
+    console.log("reseTbl", reseTbl)
+
+    return await resetDB();
 };
 
 /**
@@ -58,9 +184,71 @@ exports.managerLogin = async (data) => {
  * Fail: Conflict ({result="master is already exist", accountId=<masters id>})
  */
 exports.addMaster = async (data) => {
-    return await addMaster(data.masterData);
+    try {
+        console.log("data", data)
+        if (!data.TraderId) {
+            throw new Error("TraderId is mandatory");
+        }
+
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        // Insert data into the database before calling addMaster
+        let sql = `
+        INSERT INTO [dbo].[Copy_Master]
+            ([MasterId], [MasterAccountNumber], [Password], [Name], [NumSalves], [SalveSeidt], [AccountType], [TraderId], [CreatedBy], [CreatedDate], [UpdatedDate], [Status], [Comment], [Result], [AccountId])
+        VALUES
+            (0, ${data.masterAccountNumber}, '${data.password}', '${data.name}', ${data.numSalves}, ${data.salveseidt ? 1 : 0}, ${data.accountType}, ${data.TraderId}, '', GETDATE(), GETDATE(), 0, '', '', 0)
+    `
+
+        console.log("sql", sql)
+        await request.query(sql);
+
+        const result = await addMaster(data);
+        console.log("result", result)
+
+
+        // Update the result in the database after calling addMaster
+        let mres = await request.query(` UPDATE [dbo].[Copy_Master] SET [Result] = '${JSON.stringify(result)}'
+        WHERE  [MasterAccountNumber] = ${data.masterAccountNumber}  ;
+        UPDATE MT5_Profile_Account SET AccountType = 'Master' WHERE MT5AccountId =${data.masterAccountNumber} ;
+         
+    `);
+        console.log("mres", mres)
+
+        return result;
+
+    } catch (error) {
+        console.log("error", error)
+        throw new Error(error.message || "Error while adding master");
+    }
 };
 
+// get list of manage details db  and from api 
+exports.getMasterDetails = async () => {
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    // Retrieve Master details from the database
+    const masterDetails = await request.query(` SELECT  * FROM  Copy_Master `);
+
+    if (masterDetails.recordset.length === 0) {
+        throw new Error("Master details not found");
+    }
+
+    const master = masterDetails.recordset;
+
+    let masterlive = [];
+
+    try {
+        masterlive = await getMasters();
+
+    } catch (error) {
+        console.error("Error getMasters: ", error)
+    }
+
+    return { masterDB: master, masterlive: masterlive };
+};
 /**
  * URL: http://<host>:<port>/Home/removeMater/{id}
  * Method: GET
@@ -73,7 +261,7 @@ exports.removeMaster = async (data) => {
 };
 
 /**
- * URL: http://<host>:<port>//home/addUser
+ * URL: http://<host>:<port>//home/addSlave
  * Method: POST
  * Input: {
  *   "id": 0,
@@ -89,11 +277,42 @@ exports.removeMaster = async (data) => {
  *   "minLot": false,
  *   "sptp": false
  * }
- * Description: Add a user with the given details.
+ * Description: Add a slave with the given details.
  */
-exports.addUser = async (data) => {
-    return await addUser(data);
+exports.addSlave = async (data) => {
+    console.log("data", data)
+    if (!data.TraderId) {
+        throw new Error("TraderId is mandatory");
+    }
+
+    const pool = await poolPromise;
+    const request = pool.request();
+
+    // Insert data into the database before calling addUser
+    console.log("data", data)
+    let sql = ` INSERT INTO [dbo].[Copy_Slave]
+            ([LoginId], [MLoginId], [Message], [Type], [TradeType], [FixVolume], [PriceType], [Multiplier], [RoundOf], [MinLot], [SPTP], [Percentage], [AccountType], [Comment], [CreatedBy], [CreateDate], [UpdateDate], [Active], [TraderId])
+        VALUES
+            (${data.loginid}, ${data.mloginid}, '${data.message}', ${data.type}, ${data.tradeType}, ${data.fixvolume}, ${data.priceType}, ${data.mutlipler}, ${data.roundof ? 1 : 0}, ${data.minLot ? 0 : 1}, ${data.sptp}, 0, 0, '', '', GETDATE(), GETDATE(), 1, ${data.TraderId}) `;
+
+    console.log("sql", sql)
+    let resql = await request.query(sql);
+    console.log("resql", resql)
+
+    const result = await addUser(data);
+    console.log("result", result)
+
+    // Update the result in the database after calling addUser
+    let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}' WHERE [LoginId] = ${data.loginid} AND [MLoginId] = ${data.mloginid};    
+        UPDATE MT5_Profile_Account SET AccountType = 'Slave' WHERE MT5AccountId =${data.LoginId} ;
+          `;
+    let ures = await request.query(usql);
+
+    console.log("ures", ures)
+    return result;
 };
+
+
 
 /**
  * URL: http://<host>:<port>//home/opentrade

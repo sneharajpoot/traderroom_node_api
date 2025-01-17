@@ -1,17 +1,18 @@
 // ./services/copy.service.js
 
 const axios = require('axios');
-const API_BASE_URL = 'http://164.132.247.26:6005/Home';
+require('dotenv').config();
 
+const API_BASE_URL = process.env.API_BASE_URL || 'http://164.132.247.26:6005/Home';
 const tokenAuth = {
-    mngid: "amok",
-    password: "CsaWp2QOLdgk1n832QZULw=="
+    mngid: process.env.MNGID || "amok",
+    password: process.env.PASSWORD || "CsaWp2QOLdgk1n832QZULw=="
 };
 
-// Helper function to get token
 let cachedToken = null;
 let tokenExpiry = null;
 
+// Helper: Get Auth Token
 async function getAuthToken() {
     if (cachedToken && tokenExpiry && tokenExpiry > Date.now()) {
         return cachedToken;
@@ -20,8 +21,7 @@ async function getAuthToken() {
     try {
         const response = await axios.post(`${API_BASE_URL}/token`, tokenAuth);
         cachedToken = response.data.token;
-        console.log("cachedToken", cachedToken)
-        tokenExpiry = Date.now() + 15 * 60 * 1000; // Assuming token is valid for 15 minutes
+        tokenExpiry = Date.now() + 15 * 60 * 1000; // Token validity for 15 minutes
         return cachedToken;
     } catch (error) {
         console.error("Error generating token:", error.response?.data || error.message);
@@ -39,32 +39,22 @@ exports.addManager = async (mngId, serverIp, pasword) => {
         throw new Error(error.response?.data?.result || 'Error adding manager');
     }
 };
-// Remove Master
-exports.removeManager = async (userid , password ) => {
+
+// Remove Manager
+exports.removeManager = async (userid, password) => {
     try {
         const token = await getAuthToken();
-        const response = await axios.post(`${API_BASE_URL}/removeManager`, {
-            "userid": userid,
-            "password": password
-          }, {
+        const response = await axios.post(`${API_BASE_URL}/removeManager`, { userid, password }, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
     } catch (error) {
-        console.error("Error removing master:", error.response?.data || error.message);
-        throw new Error('Error removing master');
-    }
-};
-// Generate Token
-exports.generateToken = async () => {
-    try {
-        return await getAuthToken();
-    } catch (error) {
-        throw new Error(error.message);
+        console.error("Error removing manager:", error.response?.data || error.message);
+        throw new Error('Error removing manager');
     }
 };
 
-// Manager Login
+// Login Manager
 exports.loginManager = async (mngId) => {
     try {
         const token = await getAuthToken();
@@ -74,12 +64,38 @@ exports.loginManager = async (mngId) => {
         return response.data;
     } catch (error) {
         console.error("Error logging in manager:", error.response?.data || error.message);
-        throw new Error(error.response?.data || error.message || 'Error logging in manager');
+        throw new Error('Error logging in manager');
+    }
+};
+ // 
+exports.resetDB = async (mngId) => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.get(`${API_BASE_URL}/resetDB`, {  }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error resetDB in manager:", error.response?.data || error.message);
+        throw new Error('Error resetDB in manager');
     }
 };
 
-// Remove Master
-exports.removeMaster = async (id) => {
+exports.getMasters = async () => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.get(`${API_BASE_URL}/getMasters`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error getMasters in manager:", error.response?.data || error.message);
+        throw new Error(error.response?.data || error.message || 'Error getMasters in manager');
+    }
+};
+ 
+// Logout Manager
+exports.logoutManager = async (mngId) => {
     try {
         const token = await getAuthToken();
         const response = await axios.get(`${API_BASE_URL}/removeMaster/${id}`, {
@@ -102,7 +118,21 @@ exports.addMaster = async (masterData) => {
         return response.data;
     } catch (error) {
         console.error("Error adding master:", error.response?.data || error.message);
-        throw new Error('Error adding master');
+        throw new Error(error.response?.data?.result || error.message || 'Error adding master');
+    }
+};
+
+// Remove Master
+exports.removeMaster = async (id) => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.get(`${API_BASE_URL}/removeMaster/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error removing master:", error.response?.data || error.message);
+        throw new Error('Error removing master');
     }
 };
 
@@ -116,7 +146,7 @@ exports.addUser = async (userData) => {
         return response.data;
     } catch (error) {
         console.error("Error adding user:", error.response?.data || error.message);
-        throw new Error('Error adding user');
+        throw new Error(error.response?.data?.result || error.message || 'Error adding user');
     }
 };
 
@@ -145,5 +175,33 @@ exports.closeOrder = async (orderData) => {
     } catch (error) {
         console.error("Error closing order:", error.response?.data || error.message);
         throw new Error('Error closing order');
+    }
+};
+
+// Get API Log
+exports.getAPILog = async () => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.get(`${API_BASE_URL}/getAPILog`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching API log:", error.response?.data || error.message);
+        throw new Error('Error fetching API log');
+    }
+};
+
+// Get App Log
+exports.getAppLog = async () => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.get(`${API_BASE_URL}/getAppLog`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching app log:", error.response?.data || error.message);
+        throw new Error('Error fetching app log');
     }
 };

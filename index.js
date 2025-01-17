@@ -85,6 +85,7 @@ app.get('/users', async (req, res) => {
  
 app.use('/api',Router.ibRoute)
 app.use('/api',Router.masterCopyRoutes)
+app.use('/api',Router.copyRoutes)
 // Start the server
 //  const port = process.env.PORT || 8081;
 const port =  8082;
