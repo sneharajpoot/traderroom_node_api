@@ -55,7 +55,7 @@ exports.removeManager = async (userid, password) => {
 };
 
 // Login Manager
-exports.loginManager = async (mngId) => {
+exports.managerLogin = async (mngId) => {
     try {
         const token = await getAuthToken();
         const response = await axios.post(`${API_BASE_URL}/managerLogin`, { mngId }, {
@@ -67,6 +67,34 @@ exports.loginManager = async (mngId) => {
         throw new Error('Error logging in manager');
     }
 };
+// Login Manager
+exports.managerLogout = async (mngId) => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.post(`${API_BASE_URL}/managerLogout`, { mngId }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error logging in manager:", error.response?.data || error.message);
+        throw new Error('Error logging in manager');
+    }
+};
+
+// Login Manager
+exports.connectionStatus = async () => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.post(`${API_BASE_URL}/connectionStatus`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error logging in manager:", error.response?.data || error.message);
+        throw new Error('Error logging in manager');
+    }
+};
+
  // 
 exports.resetDB = async (mngId) => {
     try {

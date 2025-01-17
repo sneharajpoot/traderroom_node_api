@@ -1,6 +1,13 @@
 // copy.controller.js
 
-const { resetDB, removeManager, addManager, getMasters, generateToken, loginManager, addMaster, removeMaster, addUser, openTrade, closeOrder, removeUser, updateUser, getUsers, updatePriceTime, getAppLog, getAPILog } = require('../copy/api.js');
+const { resetDB, removeManager,
+    addManager, managerLogin, managerLogout,
+    getMasters, generateToken,
+
+    connectionStatus, addMaster, removeMaster, addUser,
+    openTrade, closeOrder, removeUser, updateUser, getUsers,
+    updatePriceTime, getAppLog, getAPILog
+} = require('../copy/api.js');
 
 const { sql, poolPromise } = require('../db');
 
@@ -134,9 +141,17 @@ exports.managerLogin = async () => {
     const manager = managerDetails.recordset[0];
     console.log("managerDetails", manager)
 
-    // return await loginManager(manager.ManagerId);
-    return await loginManager(10033);
+    return await managerLogin(manager.ManagerId);
+    // return await managerLogin(10033);
 };
+exports.managerLogout = async (mngId) => { 
+    return await managerLogout(mngId); 
+};
+
+exports.connectionStatus = async () => {
+    return await connectionStatus();
+};
+
 
 // get list of manage details db  and from api 
 exports.getSlaveDetails = async (MasterId) => {
@@ -161,7 +176,8 @@ exports.resetDB = async () => {
 
     // truncate table before reset
     const reseTbl = await request.query(`  truncate table [Copy_Slave]; truncate table [Copy_Add_Manager];
- truncate table [Copy_Master]; truncate table [Copy_Master_Performance]`)
+ truncate table [Copy_Master]; 
+ truncate table [Copy_Master_Performance]`)
     console.log("reseTbl", reseTbl)
 
     return await resetDB();
@@ -199,10 +215,20 @@ exports.addMaster = async (data) => {
             ([MasterId], [MasterAccountNumber], [Password], [Name], [NumSalves], [SalveSeidt], [AccountType], [TraderId], [CreatedBy], [CreatedDate], [UpdatedDate], [Status], [Comment], [Result], [AccountId])
         VALUES
             (0, ${data.masterAccountNumber}, '${data.password}', '${data.name}', ${data.numSalves}, ${data.salveseidt ? 1 : 0}, ${data.accountType}, ${data.TraderId}, '', GETDATE(), GETDATE(), 0, '', '', 0)
-    `
+    `;
 
         console.log("sql", sql)
         await request.query(sql);
+        await exports.addPerformance({
+            "Name": data.name,
+            "Time": '',
+            "IncPercent": 0,
+            "IncUsd": 0,
+            "WinRate": 0,
+            "AUM": 0,
+            "TraderId": data.TraderId,
+            "MasterAccount": data.masterAccountNumber
+        });
 
         const result = await addMaster(data);
         console.log("result", result)
@@ -303,9 +329,11 @@ exports.addSlave = async (data) => {
     console.log("result", result)
 
     // Update the result in the database after calling addUser
-    let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}' WHERE [LoginId] = ${data.loginid} AND [MLoginId] = ${data.mloginid};    
-        UPDATE MT5_Profile_Account SET AccountType = 'Slave' WHERE MT5AccountId =${data.LoginId} ;
+    let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}' 
+    WHERE [LoginId] = ${data.loginid} AND [MLoginId] = ${data.mloginid};    
+        UPDATE MT5_Profile_Account SET AccountType = 'Slave' WHERE MT5AccountId =${data.loginid} ;
           `;
+    console.log("usql", usql)
     let ures = await request.query(usql);
 
     console.log("ures", ures)
@@ -423,4 +451,81 @@ exports.getAppLog = async () => {
  */
 exports.getAPILog = async () => {
     return await getAPILog();
+};
+
+
+// Add a record to Copy_Master_Performance
+exports.addPerformance = async (data) => {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        let sql = `
+        INSERT INTO [dbo].[Copy_Master_Performance]
+            ([Name], [Time], [IncPercent], [IncUsd], [WinRate], [AUM], [TraderId], [MasterAccount])
+        VALUES
+            ('${data.Name}', '${data.Time}', ${data.IncPercent}, ${data.IncUsd}, ${data.WinRate}, ${data.AUM}, ${data.TraderId}, '${data.MasterAccount}')
+        `;
+
+        console.log("sql", sql);
+        let result = await request.query(sql);
+        console.log("result", result);
+
+        return { result: true, message: 'Record added successfully', response: result };
+    } catch (error) {
+        console.log("error", error);
+        throw new Error(error.message || "Error while adding performance record");
+    }
+};
+
+// Update a record in Copy_Master_Performance
+exports.updatePerformance = async (TraderId, data) => {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        let sql = `
+        UPDATE [dbo].[Copy_Master_Performance]
+        SET [Name] = '${data.Name}', [Time] = '${data.Time}', 
+        [IncPercent] = ${data.IncPercent}, [IncUsd] = ${data.IncUsd}, 
+        [WinRate] = ${data.WinRate}, [AUM] = ${data.AUM},
+         
+         [UpdateDate] = GETDATE()
+        WHERE [TraderId] = ${TraderId}
+        `;
+
+        console.log("sql", sql);
+        let result = await request.query(sql);
+        console.log("result", result);
+
+        return { result: true, message: 'Record updated successfully', response: result };
+    } catch (error) {
+        console.log("error", error);
+        throw new Error(error.message || "Error while updating performance record");
+    }
+};
+
+// Get records from Copy_Master_Performance
+exports.getPerformance = async (TraderId) => {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        let sql = `
+        SELECT TOP (1000) [Id], [Name], [Time], [IncPercent], [IncUsd], [WinRate], [AUM], [TraderId], [MasterAccount], [UpdateDate]
+        FROM [dbo].[Copy_Master_Performance]
+        `;
+        if (TraderId) {
+            sql += ` WHERE [TraderId] = ${TraderId}`;
+        }
+
+        console.log("sql", sql);
+        let result = await request.query(sql);
+        console.log("result", result);
+
+        return result.recordset;
+    } catch (error) {
+        console.log("error", error);
+        throw new Error(error.message || "Error while getting performance records");
+    }
 };

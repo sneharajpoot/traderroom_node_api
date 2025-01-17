@@ -24,6 +24,25 @@ router.get('/copy/managerLogin', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// Route to login manager
+router.get('/copy/managerLogout', async (req, res) => {
+    try {
+        const result = await copyController.managerLogout(req.query.mngId);
+        res.status(200).json({result:true ,Message: result.result, response: result});
+    } catch (error) {
+        res.status(500).json({ result:false, Message: error.message });
+    }
+});
+
+// Route to login manager
+router.get('/copy/connectionStatus', async (req, res) => {
+    try {
+        const result = await copyController.connectionStatus();
+        res.status(200).json({result:true ,Message: result.result, response: result});
+    } catch (error) {
+        res.status(500).json({ Message: error.message });
+    }
+});
 
 // Route to add master
 router.post('/copy/addMaster', async (req, res) => {
@@ -129,11 +148,44 @@ router.post('/copy/ensureManager', async (req, res) => {
                 const addManagerResult = await copyController.addManager(req.body);
                 res.status(200).json(addManagerResult);
             } catch (addError) {
-                res.status(500).json({ error: addError.message });
+                res.status(500).json({ result:false, Message: addError.message });
             }
         } else {
-            res.status(500).json({ error: loginError.message });
+            res.status(500).json({ result:false,Message: loginError.message });
         }
+    }
+});
+
+// Route to add a record to Copy_Master_Performance
+router.post('/copy/addPerformance', async (req, res) => {
+    try {
+        const result = await copyController.addPerformance(req.body);
+        res.status(200).json({ result: true, Message: 'Record added successfully', response: result });
+    } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result: false, Message: error.message });
+    }
+});
+
+// Route to update a record in Copy_Master_Performance
+router.put('/copy/updatePerformance/:TraderId', async (req, res) => {
+    try {
+        const result = await copyController.updatePerformance(req.params.TraderId, req.body);
+        res.status(200).json({ result: true, Message: 'Record updated successfully', response: result });
+    } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result: false, Message: error.message });
+    }
+});
+
+// Route to get records from Copy_Master_Performance
+router.get('/copy/getPerformance', async (req, res) => {
+    try {
+        const result = await copyController.getPerformance(req.query.TraderId);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('error', error.message);
+        res.status(500).json({ result: false, Message: error.message });
     }
 });
 
