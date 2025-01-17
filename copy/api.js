@@ -39,7 +39,22 @@ exports.addManager = async (mngId, serverIp, pasword) => {
         throw new Error(error.response?.data?.result || 'Error adding manager');
     }
 };
-
+// Remove Master
+exports.removeManager = async (userid , password ) => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.post(`${API_BASE_URL}/removeManager`, {
+            "userid": userid,
+            "password": password
+          }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error removing master:", error.response?.data || error.message);
+        throw new Error('Error removing master');
+    }
+};
 // Generate Token
 exports.generateToken = async () => {
     try {

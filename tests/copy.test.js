@@ -1,6 +1,6 @@
 // copy.test.js
 
-const { addManager, generateToken, managerLogin, addMaster, removeMaster, addUser, openTrade, closeOrder } = require('../controller/copy.controller.js');
+const { addManager, removeManager, generateToken, mannagerLogin, addMaster, removeMaster, addUser, openTrade, closeOrder } = require('../controller/copy.controller.js');
 
 // Mock Data
 const mockManager = {
@@ -11,24 +11,6 @@ const mockManager = {
 
 };
 
-const mockUser = {
-    userData: {
-        id: 1,
-        loginid: 123456,
-        mloginid: 654321,
-        message: 'Test User',
-        type: 0,
-        tradeType: 1,
-        fixvolume: 0.1,
-        priceType: 0,
-        mutlipler: 1,
-        roundof: false,
-        minLot: true,
-        sptp: false
-    },
-    mngid: 'testManager',
-    password: 'testPassword'
-};
 
 const mockTrade = {
     tradeData: {
@@ -61,7 +43,7 @@ const mockOrder = {
 describe('MT5TradeCopier Controller Functions', () => {
     it('should add a manager', async (done) => {
         try {
-            return done()
+            // return done()
 
             const result = await addManager(mockManager);
             console.log("result", result)
@@ -72,15 +54,10 @@ describe('MT5TradeCopier Controller Functions', () => {
         }
     });
 
-    // it('should generate a token', async () => {
-    //     const result = await generateToken();
-    //     expect(result).toHaveProperty('token');
-    // });
-
     it('should login manager', async (done) => {
 
         try {
-            return done()
+            // return done()
 
             const result = await managerLogin({ mngId: mockManager.mngId });
             expect(result).toHaveProperty('message', 'Manager logged in successfully');
@@ -95,7 +72,7 @@ describe('MT5TradeCopier Controller Functions', () => {
 
     it('should add a master', async (done) => {
         try {
-            return done()
+            // return done()
 
             const mockMasterData = {
                 "masterid": 0,
@@ -116,6 +93,29 @@ describe('MT5TradeCopier Controller Functions', () => {
         }
     });
 
+
+    it('should add a user', async () => {
+
+        const mockUser = {
+            "id": 0,
+            "loginid": 0,
+            "mloginid": 0,
+            "message": "string",
+            "type": 0,
+            "tradeType": 0,
+            "fixvolume": 0,
+            "priceType": 0,
+            "mutlipler": 0,
+            "roundof": true,
+            "minLot": true,
+            "sptp": 0,
+            "precentage": 0,
+            "accountType": 0
+        }
+        const result = await addUser(mockUser);
+        expect(result).toHaveProperty('userData');
+    });
+
     it('should remove a master', async (done) => {
         try {
             return done()
@@ -128,6 +128,24 @@ describe('MT5TradeCopier Controller Functions', () => {
             done(error)
         }
     });
+    it('should remove a removeManager', async (done) => {
+        try {
+            return done()
+
+            const result = await removeManager({ id: 1 });
+            expect(result).toHaveProperty('message', 'Master removed successfully');
+            done()
+        } catch (error) {
+            console.log("error", error.message || error)
+            done(error)
+        }
+    });
+
+    // it('should generate a token', async () => {
+    //     const result = await generateToken();
+    //     expect(result).toHaveProperty('token');
+    // });
+
 
     // it('should add a user', async () => {
     //     const result = await addUser(mockUser);

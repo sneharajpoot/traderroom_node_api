@@ -1,6 +1,6 @@
 // copy.controller.js
 
-const { addManager, generateToken, loginManager, addMaster, removeMaster, addUser, openTrade, closeOrder, removeUser, updateUser, getUsers, updatePriceTime, getAppLog, getAPILog } = require('../copy/api.js');
+const { removeManager, addManager, generateToken, loginManager, addMaster, removeMaster, addUser, openTrade, closeOrder, removeUser, updateUser, getUsers, updatePriceTime, getAppLog, getAPILog } = require('../copy/api.js');
 
 /**
  * URL: http://<host>:<port>//home/AddMng
@@ -13,6 +13,11 @@ const { addManager, generateToken, loginManager, addMaster, removeMaster, addUse
  */
 exports.addManager = async (data) => {
     return await addManager(data.mngId, data.serverIp, data.pasword);
+};
+
+
+exports.removeManager = async (data) => {
+    return await removeManager(data.mngId, data.serverIp, data.pasword);
 };
 
 /**
@@ -87,7 +92,7 @@ exports.removeMaster = async (data) => {
  * Description: Add a user with the given details.
  */
 exports.addUser = async (data) => {
-    return await addUser(data.userData);
+    return await addUser(data);
 };
 
 /**
