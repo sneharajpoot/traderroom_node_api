@@ -10,7 +10,7 @@ router.post('/copy/AddMng', async (req, res) => {
         const resultM = await copyController.addManager(req.body);
         res.status(200).json({ Message: 'Manager Added Successfully for copy', result:true ,  response: resultM});
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 
@@ -21,7 +21,7 @@ router.get('/copy/managerLogin', async (req, res) => {
         const result = await copyController.managerLogin();
         res.status(200).json({result:true ,Message: 'Manager Login Successfully for copy', response: result});
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 // Route to login manager
@@ -50,7 +50,7 @@ router.post('/copy/addMaster', async (req, res) => {
         const result = await copyController.addMaster(req.body);
         res.status(200).json({result:true ,Message: 'Master Added Successfully for copy', response: result});
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 
@@ -60,7 +60,7 @@ router.post('/copy/removeMaster', async (req, res) => {
         const result = await copyController.removeMaster(req.body);
         res.status(200).json({ result:true ,Message: 'Master Removed Successfully for copy', response: result});
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 
@@ -92,7 +92,7 @@ router.get('/copy/getManagerDetails', async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error('error', error.message);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 // Route to   getMasterDetails
@@ -123,7 +123,7 @@ router.post('/copy/opentrade', async (req, res) => {
         const result = await copyController.openTrade(req.body);
         res.status(200).json(result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 
@@ -131,9 +131,9 @@ router.post('/copy/opentrade', async (req, res) => {
 router.post('/copy/closeOrder', async (req, res) => {
     try {
         const result = await copyController.closeOrder(req.body);
-        res.status(200).json(result);
+        res.status(200).json(resulst);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ result:false, Message: error.message });
     }
 });
 

@@ -39,16 +39,23 @@ exports.addManager = async (data) => {
             throw new Error("Manager details not found");
         }
 
-        // const manager = managerDetails.recordset[0];
-        // console.log("managerDetails", manager)
+        const manager = managerDetails.recordset[0];
+        console.log("managerDetails", manager)
 
-        const manager = {
-            "ServerName": "Demo Server",
-            "ManagerId": 10033,
-            "ServerConfig": "176.126.66.21:443",
-            "Password": "September@2024"
+        // const manager = {
+        //     "ServerName": "Demo Server",
+        //     "ManagerId": 10033,
+        //     "ServerConfig": "176.126.66.21:443",
+        //     "Password": "September@2024"
 
+        // }
+
+        // check if manager already exist
+        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Add_Manager] WHERE [MngId] = ${manager.ManagerId}  `);
+        if (checkMng.recordset.length > 0) {
+            throw new Error("Manager already exist");
         }
+
 
         // Insert data into the database before calling addManager
         let addMng = await request.query(`
@@ -144,8 +151,8 @@ exports.managerLogin = async () => {
     return await managerLogin(manager.ManagerId);
     // return await managerLogin(10033);
 };
-exports.managerLogout = async (mngId) => { 
-    return await managerLogout(mngId); 
+exports.managerLogout = async (mngId) => {
+    return await managerLogout(mngId);
 };
 
 exports.connectionStatus = async () => {
@@ -202,42 +209,62 @@ exports.resetDB = async () => {
 exports.addMaster = async (data) => {
     try {
         console.log("data", data)
-        if (!data.TraderId) {
+
+        let body = {
+            "TraderId": Number(data.TraderId),
+            "masterid": 0,
+            "masterAccountNumber": Number(data.masterAccountNumber),
+            "password": data.password,
+            "name": data.name,
+            "numSalves": Number(data.numSalves),
+            "salveseidt": data.salveseidt ? true : false,
+            "accountType": Number(data.accountType)
+
+        }
+        if (!body.TraderId) {
             throw new Error("TraderId is mandatory");
         }
 
         const pool = await poolPromise;
         const request = pool.request();
 
+        // check if master already exist
+        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Master] WHERE [MasterAccountNumber] = ${body.masterAccountNumber}  `);
+        if (checkMng.recordset.length > 0) {
+            throw new Error("Master already exist");
+        }
+
+
         // Insert data into the database before calling addMaster
         let sql = `
         INSERT INTO [dbo].[Copy_Master]
             ([MasterId], [MasterAccountNumber], [Password], [Name], [NumSalves], [SalveSeidt], [AccountType], [TraderId], [CreatedBy], [CreatedDate], [UpdatedDate], [Status], [Comment], [Result], [AccountId])
         VALUES
-            (0, ${data.masterAccountNumber}, '${data.password}', '${data.name}', ${data.numSalves}, ${data.salveseidt ? 1 : 0}, ${data.accountType}, ${data.TraderId}, '', GETDATE(), GETDATE(), 0, '', '', 0)
+            (0, ${body.masterAccountNumber}, '${body.password}', '${body.name}', ${body.numSalves}, ${body.salveseidt ? 1 : 0}, ${body.accountType}, ${body.TraderId}, '', GETDATE(), GETDATE(), 0, '', '', 0)
     `;
 
         console.log("sql", sql)
         await request.query(sql);
         await exports.addPerformance({
-            "Name": data.name,
+            "Name": body.name,
             "Time": '',
             "IncPercent": 0,
             "IncUsd": 0,
             "WinRate": 0,
             "AUM": 0,
-            "TraderId": data.TraderId,
-            "MasterAccount": data.masterAccountNumber
+            "TraderId": body.TraderId,
+            "MasterAccount": body.masterAccountNumber
         });
 
-        const result = await addMaster(data);
+        const result = await addMaster(body);
         console.log("result", result)
 
 
         // Update the result in the database after calling addMaster
-        let mres = await request.query(` UPDATE [dbo].[Copy_Master] SET [Result] = '${JSON.stringify(result)}'
-        WHERE  [MasterAccountNumber] = ${data.masterAccountNumber}  ;
-        UPDATE MT5_Profile_Account SET AccountType = 'Master' WHERE MT5AccountId =${data.masterAccountNumber} ;
+        let mres = await request.query(` 
+            UPDATE [dbo].[Copy_Master] SET [Result] = '${JSON.stringify(result)}'
+            WHERE  [MasterAccountNumber] = ${body.masterAccountNumber}  ;
+            UPDATE MT5_Profile_Account SET AccountType = 'Master' WHERE MT5AccountId =${body.masterAccountNumber} ;
          
     `);
         console.log("mres", mres)
@@ -307,31 +334,57 @@ exports.removeMaster = async (data) => {
  */
 exports.addSlave = async (data) => {
     console.log("data", data)
-    if (!data.TraderId) {
+
+    let body = {
+        "TraderId": Number(data.TraderId),
+        "id": Number(data.id),
+        "loginid": Number(data.loginid),
+        "mloginid": Number(data.mloginid),
+        "message": data.message,
+        "type": Number(data.type),
+        "tradeType": Number(data.tradeType),
+        "fixvolume": Number(data.fixvolume),
+        "priceType": Number(data.priceType),
+        "mutlipler": Number(data.mutlipler),
+        "roundof": data.roundof ? true : false,
+        "minLot": data.minLot ? true : false,
+        "sptp": Number(data.sptp),
+        "precentage": Number(data.precentage),
+        "accountType": Number(data.accountType)
+    }
+    if (!body.TraderId) {
         throw new Error("TraderId is mandatory");
     }
 
     const pool = await poolPromise;
     const request = pool.request();
 
+    // check LoginId and MLoginId already exist
+    const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Slave] WHERE [LoginId] = ${body.loginid} `);
+    if (checkMng.recordset.length > 0) {
+        throw new Error("LoginId and MLoginId already exist");
+    }
+
+
+
     // Insert data into the database before calling addUser
     console.log("data", data)
     let sql = ` INSERT INTO [dbo].[Copy_Slave]
             ([LoginId], [MLoginId], [Message], [Type], [TradeType], [FixVolume], [PriceType], [Multiplier], [RoundOf], [MinLot], [SPTP], [Percentage], [AccountType], [Comment], [CreatedBy], [CreateDate], [UpdateDate], [Active], [TraderId])
         VALUES
-            (${data.loginid}, ${data.mloginid}, '${data.message}', ${data.type}, ${data.tradeType}, ${data.fixvolume}, ${data.priceType}, ${data.mutlipler}, ${data.roundof ? 1 : 0}, ${data.minLot ? 0 : 1}, ${data.sptp}, 0, 0, '', '', GETDATE(), GETDATE(), 1, ${data.TraderId}) `;
+            (${body.loginid}, ${body.mloginid}, '${body.message}', ${body.type}, ${body.tradeType}, ${body.fixvolume}, ${body.priceType}, ${body.mutlipler}, ${body.roundof ? 1 : 0}, ${body.minLot ? 0 : 1}, ${body.sptp}, 0, 0, '', '', GETDATE(), GETDATE(), 1, ${body.TraderId}) `;
 
     console.log("sql", sql)
     let resql = await request.query(sql);
     console.log("resql", resql)
 
-    const result = await addUser(data);
+    const result = await addUser(body);
     console.log("result", result)
 
     // Update the result in the database after calling addUser
     let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}' 
-    WHERE [LoginId] = ${data.loginid} AND [MLoginId] = ${data.mloginid};    
-        UPDATE MT5_Profile_Account SET AccountType = 'Slave' WHERE MT5AccountId =${data.loginid} ;
+    WHERE [LoginId] = ${body.loginid} AND [MLoginId] = ${body.mloginid};    
+        UPDATE MT5_Profile_Account SET AccountType = 'Slave' WHERE MT5AccountId =${body.loginid} ;
           `;
     console.log("usql", usql)
     let ures = await request.query(usql);
@@ -512,11 +565,27 @@ exports.getPerformance = async (TraderId) => {
         const request = pool.request();
 
         let sql = `
-        SELECT TOP (1000) [Id], [Name], [Time], [IncPercent], [IncUsd], [WinRate], [AUM], [TraderId], [MasterAccount], [UpdateDate]
-        FROM [dbo].[Copy_Master_Performance]
+        SELECT 
+            cmp.[Id], 
+            cmp.[Name], 
+            cmp.[Time], 
+            cmp.[IncPercent], 
+            cmp.[IncUsd], 
+            cmp.[WinRate], 
+            cmp.[AUM], 
+            cmp.[TraderId], 
+            cmp.[MasterAccount],  
+            cm.* -- Add other columns from Copy_Master as needed
+        FROM 
+            [dbo].[Copy_Master_Performance] cmp
+        JOIN 
+            [dbo].[Copy_Master] cm
+        ON 
+            cmp.TraderId = cm.TraderId  -- Assuming MasterAccount is the join key
+    
         `;
         if (TraderId) {
-            sql += ` WHERE [TraderId] = ${TraderId}`;
+            sql += ` WHERE cmp.TraderId = ${TraderId}`;
         }
 
         console.log("sql", sql);
