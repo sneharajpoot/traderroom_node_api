@@ -51,7 +51,7 @@ exports.addManager = async (data) => {
         // }
 
         // check if manager already exist
-        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Add_Manager] WHERE [MngId] = ${manager.ManagerId}  `);
+        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Add_Manager] WHERE  IsDelete != 1 and [MngId] = ${manager.ManagerId}  `);
         if (checkMng.recordset.length > 0) {
             throw new Error("Manager already exist");
         }
@@ -91,13 +91,70 @@ exports.addManager = async (data) => {
 
     }
 };
+
+
+exports.removeMaster = async (userid) => {
+    try { 
+ 
+        const pool = await poolPromise;
+        const request = pool.request();
+ 
+ 
+        const result = await removeMaster(userid );
+
+        console.log("result", result)
+        // Update the result in the database after calling addManager
+        // let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET  [IsDelete] = 1 WHERE [MngId] = MngId `;
+        let uSql = await request.query(` UPDATE [dbo].[Copy_Master] SET [IsDelete] = 1  WHERE  [MasterAccountNumber] = ${userid}  ;`);
+
+        let deleteMng = await request.query(uSql);
+
+        console.log("deleteMng", deleteMng)
+
+        return deleteMng;
+    } catch (error) {
+        console.log("error", error)
+        throw new Error(error.message || "Error while deleting manager");
+
+    }
+};
+exports.removeManager = async (mngId) => {
+    try { 
+        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Add_Manager] WHERE IsDelete != 1 and [MngId] = ${mngId}  `);
+        if (checkMng.recordset.length !==1) {
+            throw new Error("Manager not exist");
+        }
+
+        /**
+         * result = {
+        "result": "Token userid/password",
+        "useid": 10033,
+        "password": "LKq7EGHsMXIfV0osLs2M4g=="
+    }
+         */
+        const result = await removeManager(checkMng.recordset[0].userid, checkMng.recordset[0].password );
+
+        console.log("result", result)
+        // Update the result in the database after calling addManager
+        let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET  [IsDelete] = 1 WHERE [MngId] = MngId `;
+        let deleteMng = await request.query(usql);
+
+        console.log("deleteMng", deleteMng)
+
+        return deleteMng;
+    } catch (error) {
+        console.log("error", error)
+        throw new Error(error.message || "Error while adding manager");
+
+    }
+};
 // get list of manage details db  and from api 
 exports.getManagerDetails = async () => {
     const pool = await poolPromise;
     const request = pool.request();
 
     // Retrieve manager details from the database
-    const managerDetails = await request.query(` SELECT * FROM [Copy_Add_Manager] `);
+    const managerDetails = await request.query(` SELECT * FROM [Copy_Add_Manager] where IsDelete != 1 `);
 
     if (managerDetails.recordset.length === 0) {
         throw new Error("Manager details not found");
@@ -108,9 +165,7 @@ exports.getManagerDetails = async () => {
 
     return { managerDB: manager };
 };
-exports.removeManager = async (data) => {
-    return await removeManager(data.mngId, data.serverIp, data.pasword);
-};
+
 
 /**
  * URL: http://<host>:<port>//home/token
@@ -129,33 +184,16 @@ exports.generateToken = async () => {
  * Input: { "mngId": 0 }
  * mngId -> int (MT5 manager Account id)
  */
-exports.managerLogin = async () => {
-    const pool = await poolPromise;
-    const request = pool.request();
+exports.managerLogin = async (mngId) => { 
 
-    // console.log("data", data)
-
-    // Retrieve manager details from the database
-    const managerDetails = await request.query(`
-    SELECT TOP 1 [ManagerId], [ServerConfig], [Password], [Active], [ServerName]
-    FROM [dbo].[MT5_Manager] 
-`);
-
-    if (managerDetails.recordset.length === 0) {
-        throw new Error("Manager details not found");
-    }
-
-    const manager = managerDetails.recordset[0];
-    console.log("managerDetails", manager)
-
-    return await managerLogin(manager.ManagerId);
+    return await managerLogin(mngId);
     // return await managerLogin(10033);
 };
 exports.managerLogout = async (mngId) => {
     return await managerLogout(mngId);
 };
 
-exports.connectionStatus = async () => {
+exports.connectionStatus = async (mngId) => {
     return await connectionStatus();
 };
 
@@ -166,7 +204,7 @@ exports.getSlaveDetails = async (MasterId) => {
     const request = pool.request();
 
     // Retrieve Master details from the database
-    const slaveDetails = await request.query(` SELECT  * FROM  Copy_Slave `);
+    const slaveDetails = await request.query(` SELECT  * FROM  Copy_Slave where IsDelete != 1 `);
 
     if (slaveDetails.recordset.length === 0) {
         throw new Error("Slave details not found");
@@ -210,6 +248,9 @@ exports.addMaster = async (data) => {
     try {
         console.log("data", data)
 
+
+
+
         let body = {
             "TraderId": Number(data.TraderId),
             "masterid": 0,
@@ -229,7 +270,7 @@ exports.addMaster = async (data) => {
         const request = pool.request();
 
         // check if master already exist
-        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Master] WHERE [MasterAccountNumber] = ${body.masterAccountNumber}  `);
+        const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Master] WHERE IsDelete != 1 and [MasterAccountNumber] = ${body.masterAccountNumber}  `);
         if (checkMng.recordset.length > 0) {
             throw new Error("Master already exist");
         }
@@ -262,9 +303,37 @@ exports.addMaster = async (data) => {
 
         // Update the result in the database after calling addMaster
         let mres = await request.query(` 
-            UPDATE [dbo].[Copy_Master] SET [Result] = '${JSON.stringify(result)}'
-            WHERE  [MasterAccountNumber] = ${body.masterAccountNumber}  ;
-            UPDATE MT5_Profile_Account SET AccountType = 'Master' WHERE MT5AccountId =${body.masterAccountNumber} ;
+            UPDATE [dbo].[Copy_Master] SET [Result] = '${JSON.stringify(result)}' WHERE  [MasterAccountNumber] = ${body.masterAccountNumber}  ;
+            UPDATE MT5_Profile_Account SET CopyAccountType = 'Master' WHERE MT5AccountId =${body.masterAccountNumber} ;
+         
+    `);
+        console.log("mres", mres)
+
+        return result;
+
+    } catch (error) {
+        console.log("error", error)
+        throw new Error(error.message || "Error while adding master");
+    }
+};
+
+exports.enableSubscription = async (data) => {
+    try { 
+        // add validation
+        if (!data.masterAccountNumber) {
+            throw new Error("MasterAccountNumber is mandatory");
+        }
+        if (data.isEnable === undefined) {
+            throw new Error("isEnable is mandatory");
+        }
+        const pool = await poolPromise;
+        const request = pool.request();
+
+
+        // Update the result in the database after calling addMaster
+        let mres = await request.query(` 
+            UPDATE [dbo].[Copy_Master] SET [enableSubscription] = ${data.isEnable?1:0} 
+            WHERE  [MasterAccountNumber] = ${data.masterAccountNumber}  ; 
          
     `);
         console.log("mres", mres)
@@ -283,7 +352,7 @@ exports.getMasterDetails = async () => {
     const request = pool.request();
 
     // Retrieve Master details from the database
-    const masterDetails = await request.query(` SELECT  * FROM  Copy_Master `);
+    const masterDetails = await request.query(` SELECT  * FROM  Copy_Master where IsDelete != 1 `);
 
     if (masterDetails.recordset.length === 0) {
         throw new Error("Master details not found");
@@ -309,9 +378,7 @@ exports.getMasterDetails = async () => {
  * Output: Successfully {result=”Master removed successfully”, masterId=<master id>}
  * Fail: {result=$"master contain slave accounts {count}", masterId=id}
  */
-exports.removeMaster = async (data) => {
-    return await removeMaster(data.id);
-};
+
 
 /**
  * URL: http://<host>:<port>//home/addSlave
@@ -360,7 +427,7 @@ exports.addSlave = async (data) => {
     const request = pool.request();
 
     // check LoginId and MLoginId already exist
-    const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Slave] WHERE [LoginId] = ${body.loginid} `);
+    const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Slave] WHERE IsDelete != 1 and [LoginId] = ${body.loginid} `);
     if (checkMng.recordset.length > 0) {
         throw new Error("LoginId and MLoginId already exist");
     }
@@ -382,9 +449,8 @@ exports.addSlave = async (data) => {
     console.log("result", result)
 
     // Update the result in the database after calling addUser
-    let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}' 
-    WHERE [LoginId] = ${body.loginid} AND [MLoginId] = ${body.mloginid};    
-        UPDATE MT5_Profile_Account SET AccountType = 'Slave' WHERE MT5AccountId =${body.loginid} ;
+    let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}'  WHERE [LoginId] = ${body.loginid} AND [MLoginId] = ${body.mloginid};    
+        UPDATE MT5_Profile_Account SET CopyAccountType = 'Slave' WHERE MT5AccountId =${body.loginid} ;
           `;
     console.log("usql", usql)
     let ures = await request.query(usql);
@@ -392,8 +458,8 @@ exports.addSlave = async (data) => {
     console.log("ures", ures)
     return result;
 };
-
-
+ 
+// /Home/removeUser
 
 /**
  * URL: http://<host>:<port>//home/opentrade
@@ -428,16 +494,6 @@ exports.closeOrder = async (data) => {
 };
 
 /**
- * URL: http://<host>:<port>//home/removeUser
- * Method: POST
- * Input: { "mngId": 0 }
- * mngId -> int (MT5 slave account id)
- */
-exports.removeUser = async (data) => {
-    return await removeUser(data.mngId);
-};
-
-/**
  * URL: http://<host>:<port>//home/updateuser
  * Method: POST
  * Input: {
@@ -457,6 +513,26 @@ exports.removeUser = async (data) => {
  */
 exports.updateUser = async (data) => {
     return await updateUser(data.userData);
+};
+
+/**
+ * URL: http://<host>:<port>//home/removeUser
+ * Method: POST
+ * Input: { "mngId": 0 }
+ * mngId -> int (MT5 slave account id)
+ */
+exports.removeUser = async (userid) => {
+    let resu =  await removeUser({userid});
+    console.log("resu", resu)
+
+    // update in Copy_Slave
+    const pool = await poolPromise;
+    const request = pool.request();
+    let usql = ` UPDATE [dbo].[Copy_Slave] SET [IsDelete] = 1 WHERE [LoginId] = ${userid} `;
+    let ures = await request.query(usql);
+    console.log("ures", ures)
+
+    return ures;
 };
 
 /**
@@ -574,14 +650,25 @@ exports.getPerformance = async (TraderId) => {
             cmp.[WinRate], 
             cmp.[AUM], 
             cmp.[TraderId], 
-            cmp.[MasterAccount],  
-            cm.* -- Add other columns from Copy_Master as needed
+            cmp.[MasterAccount],   
+            
+      cm.MasterId,
+      cm.MasterAccountNumber,
+      cm.Password,
+      cm.NumSalves,
+      cm.SalveSeidt,
+      cm.AccountType,
+      cm.CreatedBy,
+      cm.Status,
+      cm.Comment,
+      cm.Result,
+      cm.AccountId
         FROM 
             [dbo].[Copy_Master_Performance] cmp
         JOIN 
             [dbo].[Copy_Master] cm
         ON 
-            cmp.TraderId = cm.TraderId  -- Assuming MasterAccount is the join key
+            cmp.TraderId = cm.TraderId and cm.IsDelete != 1 
     
         `;
         if (TraderId) {

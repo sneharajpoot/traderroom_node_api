@@ -40,7 +40,7 @@ exports.addManager = async (mngId, serverIp, pasword) => {
     }
 };
 
-// Remove Manager
+// Remove Manager mngId
 exports.removeManager = async (userid, password) => {
     try {
         const token = await getAuthToken();
@@ -85,7 +85,7 @@ exports.managerLogout = async (mngId) => {
 exports.connectionStatus = async () => {
     try {
         const token = await getAuthToken();
-        const response = await axios.post(`${API_BASE_URL}/connectionStatus`, {
+        const response = await axios.get(`${API_BASE_URL}/connectionStatus`, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
@@ -95,11 +95,11 @@ exports.connectionStatus = async () => {
     }
 };
 
- // 
+// 
 exports.resetDB = async (mngId) => {
     try {
         const token = await getAuthToken();
-        const response = await axios.get(`${API_BASE_URL}/resetDB`, {  }, {
+        const response = await axios.get(`${API_BASE_URL}/resetDB`, {}, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
@@ -121,7 +121,7 @@ exports.getMasters = async () => {
         throw new Error(error.response?.data || error.message || 'Error getMasters in manager');
     }
 };
- 
+
 // Logout Manager
 exports.logoutManager = async (mngId) => {
     try {
@@ -149,12 +149,11 @@ exports.addMaster = async (masterData) => {
         throw new Error(error.response?.data?.result || error.message || 'Error adding master');
     }
 };
-
 // Remove Master
-exports.removeMaster = async (id) => {
+exports.removeMaster = async (userid) => {
     try {
         const token = await getAuthToken();
-        const response = await axios.get(`${API_BASE_URL}/removeMaster/${id}`, {
+        const response = await axios.post(`${API_BASE_URL}/removeMaster/${id}`,{userid}, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
@@ -169,6 +168,34 @@ exports.addUser = async (userData) => {
     try {
         const token = await getAuthToken();
         const response = await axios.post(`${API_BASE_URL}/AddUser`, userData, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error adding user:", error.response?.data || error.message);
+        throw new Error(error.response?.data?.result || error.message || 'Error adding user');
+    }
+};
+
+// Add User
+exports.updateUser = async (userData) => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.post(`${API_BASE_URL}/updateUser`, userData, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Error adding user:", error.response?.data || error.message);
+        throw new Error(error.response?.data?.result || error.message || 'Error adding user');
+    }
+};
+
+// Add User
+exports.removeUser = async (userid) => {
+    try {
+        const token = await getAuthToken();
+        const response = await axios.post(`${API_BASE_URL}/removeUser`, { userid }, {
             headers: { Authorization: `Bearer ${token}` }
         });
         return response.data;
