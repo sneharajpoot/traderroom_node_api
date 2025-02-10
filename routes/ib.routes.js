@@ -111,7 +111,7 @@ router.get("/get-ib-transaction", async (req, res) => {
 router.get("/get-user-transaction", async (req, res) => {
   try {
 
-    let result = await ibControler.getTransactionByuser(req.query.Account, req.query.page, req.query.limit)
+    let result = await ibControler.getTransactionByuser(req.query.Account, req.query.page, req.query.limit,req.query.Deposit_Withdraw)
 
     res.status(200).json(result );
 

@@ -1,6 +1,6 @@
 const axios = require('axios');
-const rootUrl = 'https://service.fxbrokertools.com/fxfzm_com_test'; // Replace with your actual API URL
-
+// const rootUrl = 'https://service.fxbrokertools.com/fxfzm_com_test'; // Replace with your actual API URL
+const rootUrl =  process.env.ROOT_Url ;
 const getOpenTrade = async (Account) => {
     try {
         // API URL

@@ -228,12 +228,18 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
     }
 }
 
-const getTransactionByuser = async (Account, page = 1, limit = 10) => {
+const getTransactionByuser = async (Account, page = 1, limit = 10 , Deposit_Withdraw =null) => {
     try {
         const pool = await poolPromise; // Connect to the database
 
+        let cond = '';
 
-        let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account = ${Account}  ORDER BY ID 
+        if(  Deposit_Withdraw==0 || Deposit_Withdraw == 1) {
+
+            cond = ` AND Deposit_Withdraw = ${Deposit_Withdraw}`;
+        } 
+        
+        let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account = ${Account} AND status = 1 ${cond}   ORDER BY ID 
             OFFSET ${(page - 1) * limit} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
 
         console.log('lodas', sql1);
