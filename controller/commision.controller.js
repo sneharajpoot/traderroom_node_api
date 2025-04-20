@@ -1,4 +1,4 @@
-const { sql, poolPromise } = require('../db');
+const { poolPromise } = require('../db');
 const trApi = require('../traderroom/api')
 
 const generateCommition = async (trad) => {
@@ -169,5 +169,105 @@ const generateCommition = async (trad) => {
     }
 
 
-}
-module.exports = { generateCommition }
+} 
+
+async function processIBCommission(tradeId) {
+    try {
+        const pool = await poolPromise;
+        const request = pool.request();
+
+        // Fetch trade details (equivalent to `inserted` in trigger)
+        const tradeQuery = `
+            SELECT MT5Account, Ticket, Trader_Id, -Commission AS Commission, Lot, Close_Time
+            FROM Trades WHERE Trade_Id = @tradeId
+        `;
+        request.input("tradeId", tradeId);
+        const tradeResult = await request.query(tradeQuery);
+        if (tradeResult.recordset.length === 0) throw new Error("Trade not found");
+
+        const { MT5Account, Ticket, Trader_Id, Commission, Lot, Close_Time } = tradeResult.recordset[0];
+
+        // Get trader and IB commission plan
+        const profileQuery = `
+            SELECT Trader_Id, IBCommissionPlans FROM MT5_Profile_Account WHERE [Account] = @MT5Account
+        `;
+        request.input("MT5Account", MT5Account);
+        const profileResult = await request.query(profileQuery);
+        if (profileResult.recordset.length === 0) return;
+
+        const { IBCommissionPlans } = profileResult.recordset[0];
+
+        // Fetch active commission plan
+        const commissionPlanQuery = `
+            SELECT Commission_Code, Commission_Amount FROM IB_Commission_Plan 
+            WHERE Active = 1 AND Commission_Plan_Id = @IBCommissionPlans
+        `;
+        request.input("IBCommissionPlans", IBCommissionPlans);
+        const commissionPlanResult = await request.query(commissionPlanQuery);
+        if (commissionPlanResult.recordset.length === 0) return;
+
+        const { Commission_Code, Commission_Amount } = commissionPlanResult.recordset[0];
+
+        // Calculate commission
+        let totalCommission = Commission_Amount * Lot;
+        if (totalCommission === 0) return;
+
+        // Fetch commission levels
+        const commissionLevelsQuery = `
+            SELECT * FROM IB_Commission_Level 
+            WHERE Commission_Code = @Commission_Code ORDER BY Level_No ASC
+        `;
+        request.input("Commission_Code", Commission_Code);
+        const levelsResult = await request.query(commissionLevelsQuery);
+        if (levelsResult.recordset.length === 0) return;
+
+        const levels = levelsResult.recordset[0];
+
+        // Get referral chain
+        let currentTrader = Trader_Id;
+        let level = 0;
+
+        while (currentTrader) {
+            level++;
+
+            // Fetch referrer
+            const referrerQuery = `
+                SELECT Trader_Id, Reffered_By FROM Profiles WHERE Trader_Id = @currentTrader
+            `;
+            request.input("currentTrader", currentTrader);
+            const referrerResult = await request.query(referrerQuery);
+            if (referrerResult.recordset.length === 0) break;
+
+            const { Trader_Id: referredTrader, Reffered_By } = referrerResult.recordset[0];
+
+            // Determine commission percentage for the level
+            let levelCommission = levels[`Level${level}`] || 0;
+            let commissionAmount = (levelCommission * totalCommission) / 100;
+
+            if (commissionAmount > 0) {
+                // Insert commission record
+                const insertCommissionQuery = `
+                    INSERT INTO IB_Commission 
+                    (Trader_Id, Commission, Levels, Source, SourceAccount, DateTime, Ticket, TradeTime)
+                    VALUES (@referredTrader, @commissionAmount, @level, @Trader_Id, @MT5Account, GETDATE(), @Ticket, @Close_Time)
+                `;
+                request
+                    .input("referredTrader", referredTrader)
+                    .input("commissionAmount", commissionAmount)
+                    .input("level", level)
+                    .input("Trader_Id", Trader_Id)
+                    .input("MT5Account", MT5Account)
+                    .input("Ticket", Ticket)
+                    .input("Close_Time", Close_Time);
+
+                await request.query(insertCommissionQuery);
+            }
+
+            currentTrader = Reffered_By;
+        }
+    } catch (error) {
+        console.error("Error processing IB commission:", error.message);
+    }
+} 
+
+module.exports = { generateCommition, processIBCommission }

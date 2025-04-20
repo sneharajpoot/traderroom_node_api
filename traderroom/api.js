@@ -63,7 +63,7 @@ const GetUserInfoByAccountList = async (lstAccount) => {
         // Request headers
         const headers = {
             'x-token': '1000', // Replace with your x-token value
-            'type': 1,
+            'type': '1',
             'Content-Type': 'application/json'
         };
 
@@ -82,7 +82,7 @@ const GetUserInfoByAccountList = async (lstAccount) => {
     }
 }
 
-const getUsersOpenTrade = async (lstAccount) => {
+const GetOpenTradeByUsers = async (lstAccount) => {
     try {
         // API URL
         const url = `${rootUrl}/GetOpenTradeByUsers`; // Replace with your actual API URL
@@ -167,7 +167,69 @@ const GetOpenTrade = async (MT5Accont) => {
         throw error;
     }
 }
-module.exports = { getUserInfo, GetUserInfoByAccountList, getUsersOpenTrade, getOpenTrade, GetOpenTrade, getUsersOpenTradeNew };
+
+
+
+const GetCloseTrade = async (MT5Accont,   _StartTm,  _EndTm) => {
+    //GetOpenTrade?MT5Accont={MT5Accont}
+
+    // const  getUsersOpenTrade = async (lstAccount) => {
+    try {
+        // API URL
+        const url = `${rootUrl}/GetCloseTrade`; // Replace with your actual API URL
+
+        // Request headers
+        const headers = {
+            'x-token': '1000', // Replace with your x-token value
+            'type': 1,
+            'Content-Type': 'application/json'
+        };
+
+        // Request params (if lstAccount is a list of account numbers)
+        const queryParams = `?MT5Accont=${MT5Accont}&_StartTm=${_StartTm}&_EndTm=${_EndTm}`;
+
+        // Make the GET request
+        const response = await axios.get(url + queryParams, { headers });
+
+        // Log and return the response
+        // console.log('API Response GetCloseTrade:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error calling GetCloseTrade API:', error.message);
+        throw error;
+    }
+}
+
+const GetCloseTradeAllAccount = async (lstAccount, _StartTm, _EndTm) => {
+    try {
+        // API URL
+        const url = `${rootUrl}/GetCloseTradeAllAccount`; // Replace with your actual API URL
+
+        // Request headers
+        const headers = {
+            'x-token': '1000', // Replace with your x-token value
+            'type': 1,
+            'Content-Type': 'application/json'
+        };
+
+        // Request params (if lstAccount is a list of account numbers)
+        const queryParams = `?lstAccount=${lstAccount.join(',')}&_StartTm=${_StartTm}&_EndTm=${_EndTm}`;
+
+        // Make the GET request
+        const response = await axios.get(url + queryParams, { headers });
+
+        // Log and return the response
+        console.log('API Response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error calling GetUserInfoAll API:', error.message);
+        throw error;
+    }
+}
+
+module.exports = { getUserInfo, GetUserInfoByAccountList, GetOpenTradeByUsers, getOpenTrade, GetOpenTrade, getUsersOpenTradeNew,
+    GetCloseTrade, GetCloseTradeAllAccount 
+ };
 
 // Example usage
 // (async () => {
