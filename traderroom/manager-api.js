@@ -78,4 +78,28 @@ const GetCloseTradeAllAccount = async (lstAccount, _StartTm, _EndTm) => {
         throw error;
     }
 }
-module.exports = { GetGroups, GetCloseTrade, GetCloseTradeAllAccount };
+// https://service.fxbrokertools.com/fxfzm_com1/TimeServer
+const TimeServer = async () => {
+    try {
+        // API URL
+        const url = `${rootUrl}/TimeServer`; // Replace with your actual API URL
+
+        // Request headers
+        const headers = {
+            'x-token': '1000', // Replace with your x-token value
+            'type': 1,
+            'Content-Type': 'application/json'
+        };
+
+        // Make the GET request
+        const response = await axios.get(url, { headers });
+
+        // Log and return the response
+        console.log('API Response:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error('Error calling TimeServer API:', error.message);
+        throw error;
+    }
+}
+module.exports = { GetGroups, GetCloseTrade, GetCloseTradeAllAccount, TimeServer };

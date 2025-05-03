@@ -2,6 +2,7 @@ const { poolPromise } = require('../db');
 const trApi = require('../traderroom/api')
 const managerApi = require('../traderroom/manager-api')
 const moment = require('moment'); // or use native Date
+const dayjs = require('dayjs');
 // -----------------
 
 const getLastToTimestampFromDB = async () => {
@@ -29,32 +30,78 @@ const getIntervalMs = (type, value) => {
 // Main scheduler
 
 const startCommissionScheduler = async (type = 'min', value = 1) => {
+
     const intervalMs = getIntervalMs(type, value);
     console.log(`Scheduler started: ${type} ${value} every ${intervalMs} ms`);
 
+
+    const fromTimestamp = await getLastToTimestampFromDB();
+
+    let sTime = await managerApi.TimeServer();
+
+    const timestamp = sTime * 1000;
+    const date = new Date(timestamp);
+
+    const formattedUTC =
+        date.getUTCFullYear() + '-' +
+        String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getUTCDate()).padStart(2, '0') + ' ' +
+        String(date.getUTCHours()).padStart(2, '0') + ':' +
+        String(date.getUTCMinutes()).padStart(2, '0') + ':' +
+        String(date.getUTCSeconds()).padStart(2, '0');
+
+    // console.log('formattedUTC----', formattedUTC);  // e.g., "2025-06-02 12:05:09"
+
+    // const toTimestamp = moment().format('YYYY-MM-DD HH:mm:ss');
+    const toTimestamp = formattedUTC;// moment(sTime*1000).format('YYYY-MM-DD HH:mm:ss'); 
+    // console.log("toTimestamp", toTimestamp);
+
+    console.log("First fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
+    let col = {
+        From_Date: moment(fromTimestamp).format('YYYY-MM-DD HH:mm:ss'),
+        To_Date: toTimestamp,
+        Active: 1
+    }
+    let res = await GenerateCommissionByDate(col.From_Date, col.To_Date);
+
     setInterval(async () => {
-    // while (true) {
+        // while (true) {
         const fromTimestamp = await getLastToTimestampFromDB();
-        const toTimestamp = moment();
+        // const toTimestamp = moment().utc().format('YYYY-MM-DD hh:mm:ss');
+        let sTime = await managerApi.TimeServer();
+
+        // console.log("sTime", sTime)
+        const timestamp = sTime * 1000;
+        const date = new Date(timestamp);
+
+        const formattedUTC =
+            date.getUTCFullYear() + '-' +
+            String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+            String(date.getUTCDate()).padStart(2, '0') + ' ' +
+            String(date.getUTCHours()).padStart(2, '0') + ':' +
+            String(date.getUTCMinutes()).padStart(2, '0') + ':' +
+            String(date.getUTCSeconds()).padStart(2, '0');
+
+        console.log('formattedUTC----', formattedUTC);
+        const toTimestamp = formattedUTC;//moment(sTime*1000).format('YYYY-MM-DD hh:mm:ss');
+        //const toTimestamp = moment();
 
         //   fromDate: fD.format('YYYY-MM-DD') + ' 00:00:00',
         //   toDate: TD.format('YYYY-MM-DD') + ' 23:59:59',
 
-        console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp.format('YYYY-MM-DD hh:mm:ss'));
-        //   await GenerateCommissionByDate(fromTimestamp, toTimestamp); 
-
+        console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
+        // await GenerateCommissionByDate(fromTimestamp, toTimestamp);
 
         let col = {
             From_Date: moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'),
-            To_Date: toTimestamp.format('YYYY-MM-DD hh:mm:ss'),
+            To_Date: toTimestamp,//.format('YYYY-MM-DD hh:mm:ss'),
             Active: 1
         }
-        // console.log("col", col);
         let res = await GenerateCommissionByDate(col.From_Date, col.To_Date);
         // let resAddComm = await AddIBCommissionDate_Object(col);
 
         // console.log("resAddComm", resAddComm)
-    // }
+        // }
     }, intervalMs);
 };
 
@@ -371,19 +418,14 @@ const GenerateCommissionByDate = async (fromTimestemp, toTimestemp) => {
         To_Date: toTimestemp,
         Active: 1
     }
-    let resAddComm = await AddIBCommissionDate_Object(col);
-    if (resAddComm.result == false) {
-        res.result = false;
-        res.Message = "Unable to add commission date";
-        return res;
-    }
 
 
     let sql = " SELECT p.Trader_Id ,p.Email,p.Reffered_By,p.Reffered_By_Account,pa.Account, " +
         " pa.IBCommissionPlans   " +
         " FROM dbo.Profiles as p " +
         " join MT5_Profile_Account as pa on p.Trader_Id = pa.Trader_Id   " +
-        " Where Reffered_By_Account!= 0  and Status=1 ";
+        // " Where Reffered_By_Account!= 0  and Status=1 and Account = 629131";
+        " Where Reffered_By_Account!= 0  and Status=1  ";
 
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
@@ -399,8 +441,8 @@ const GenerateCommissionByDate = async (fromTimestemp, toTimestemp) => {
         let Trader_Id = dt[i].Trader_Id;
 
         // get close commition
-        let clt = await GetCloseTrade(Account, fromTimestemp, toTimestemp); 
-        console.log("Account-", Account, ' | lstCLOSE', clt.lstCLOSE.length, ' Trader_Id:', Trader_Id);
+        let clt = await GetCloseTrade(Account, fromTimestemp, toTimestemp);
+        console.log(i + " -Account-", Account, ' | lstCLOSE', clt.lstCLOSE.length, ' Trader_Id:', Trader_Id, 'Time:', fromTimestemp, ' - ', toTimestemp);
         if (clt.lstCLOSE.length > 0) {
 
             col.no_of_trade += clt.lstCLOSE.Count;
@@ -416,6 +458,14 @@ const GenerateCommissionByDate = async (fromTimestemp, toTimestemp) => {
     }
 
 
+
+    let resAddComm = await AddIBCommissionDate_Object(col);
+    if (resAddComm.result == false) {
+        res.result = false;
+        res.Message = "Unable to add commission date";
+        console.log("Unable to add commission date", resAddComm.Message);
+        return res;
+    }
 
 
 
@@ -469,7 +519,7 @@ const CommissionTadeADD = async (col) => {
             }
         }
 
-        await addTrades_Commission(object)
+        // await addTrades_Commission(object)
 
 
         if (sql == "") {
@@ -546,7 +596,7 @@ const isDateExists = async (date) => {
 
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
-    console.log("isDateExists", result.recordset);
+    // console.log("isDateExists", result.recordset);
     // console.log("isDateExists", result);
     resCount = result.recordset[0].tRecord;
     return resCount;
@@ -596,7 +646,7 @@ const tri_IBCommission = async (trade) => {
             if (trad1.recordset.length == 0) {
                 throw new Error("No trad found");
             }
-            console.log("for test only", trad1.recordset);
+            // console.log("for test only", trad1.recordset);
             let trad1_data = trad1.recordset;
             _MT5Account = trad1_data[0].MT5Account;
             _Ticket = trad1_data[0].Ticket;
@@ -621,13 +671,11 @@ const tri_IBCommission = async (trade) => {
         if (MT5_Profile_Account.recordset.length == 0) {
             throw new Error("No MT5_Profile_Account found");
         }
-        // console.log("MT5_Profile_Account", MT5_Profile_Account?.recordset?.length);
         _Trader_Id = MT5_Profile_Account.recordset[0]?.Trader_Id;
         _IBCommissionPlans = MT5_Profile_Account.recordset[0]?.IBCommissionPlans;
         // 	SELECT * INTO #CommitionPlan from [IB_Commission_Plan]  Where  Active=1  and Commission_Plan_Id = @IBCommissionPlans;
         let sql3 = ` SELECT * from [IB_Commission_Plan]  Where  Active=1  and Commission_Plan_Id = ${_IBCommissionPlans};;`;
         const CommitionPlanList = await pool.request().query(sql3);
-        // console.log("CommitionPlanList", CommitionPlanList.recordset);
         // 	SELECT @Commission_Code=Commission_Code , @Commission_Amount = Commission_Amount from #CommitionPlan 
         _Commission_Code = CommitionPlanList.recordset[0].Commission_Code;
         _Commission_Amount = CommitionPlanList.recordset[0].Commission_Amount;
@@ -645,7 +693,6 @@ const tri_IBCommission = async (trade) => {
             let sql4 = ` SELECT * from [IB_Commission_Level] Where Commission_Code=${_Commission_Code} Order by Level_No ASC;`;
             let CommitionLvl = await pool.request().query(sql4);
             CommitionLvl = CommitionLvl.recordset;
-            // console.log("CommitionLvl", CommitionLvl);
 
             if (CommitionLvl.length == 0) {
                 throw new Error("No CommitionLvl found");
@@ -655,7 +702,6 @@ const tri_IBCommission = async (trade) => {
             let sql5 = ` SELECT * from [Profiles] Where Trader_Id=${_Trader_Id} ;`;
             let Reffered_By_prof = await pool.request().query(sql5);
             Reffered_By_prof = Reffered_By_prof.recordset;
-            // console.log("Reffered_By_prof", Reffered_By_prof);
             if (Reffered_By_prof.length == 0) {
                 throw new Error("No Reffered_By_prof found");
             }
@@ -836,19 +882,14 @@ const tri_IBCommission = async (trade) => {
                     // 						INSERT INTO [IB_Commission] ([Trader_Id],[Commission],Levels,[Source],[SourceAccount],[DateTime],Ticket, TradeTime)
                     // 							VALUES (@cTrader_Id,@comm,@lvl,@Trader_Id,@MT5Account,(select GETDATE()),@Ticket, @Close_Time);
                     // 					END
-                    // console.log("_comm", _comm);
                     if (_comm != 0) {
                         _total_comission += _comm;
                         let sql9 = `INSERT INTO [IB_Commission] ([Trader_Id],[Commission],Levels,[Source],[SourceAccount],[DateTime],Ticket, TradeTime)
                          OUTPUT INSERTED.Commission_Id  
                         VALUES (${_cTrader_Id},${_comm},${_lvl},${_Trader_Id},${_MT5Account},(select GETDATE()),${_Ticket}, '${_Close_Time}');`;
-                        // console.log("sql9", sql9);
                         const inrtComm = await pool.request().query(sql9);
-                        console.log("INSERT [IB_Commission]", inrtComm);
 
                         let Commission_Id = inrtComm.recordset[0].Commission_Id;
-
-                        // console.log("Commission_Id", Commission_Id);
 
 
                         // { Commission_Id:'', Trader_Id:'', Commission:'', Source:'', SourceAccount:'', Ticket:'', Levels:'',}
@@ -861,15 +902,27 @@ const tri_IBCommission = async (trade) => {
                             Ticket: _Ticket,
                             Levels: _lvl,
                         });
-                        // console.log("adComm", adComm);
                     }
                     // END
                 }
                 // console.log("total_comission", _total_comission);
                 // UPDATE IB_Commission_Gen_Date SET total_comission = @total_comission WHERE Commission_Date_Id = (SELECT MAX(Commission_Date_Id) FROM IB_Commission_Gen_Date);
                 let sql10 = `UPDATE IB_Commission_Gen_Date SET total_comission = ${_total_comission} WHERE Commission_Date_Id = (SELECT MAX(Commission_Date_Id) FROM IB_Commission_Gen_Date);`;
+
+
                 const upIB_Commission_Gen_Date = await pool.request().query(sql10);
-                // console.log("upIB_Commission_Gen_Date", upIB_Commission_Gen_Date);
+
+                let object = {
+                    traderId: cTrade.Trader_Id,
+                    trade_date: cTrade.Close_Time,
+                    total_trade: 1,
+                    total_lot: cTrade.Lot,
+                    total_amount: cTrade.Open_Price,
+                    total_commission: _total_comission,
+                    total_profit: cTrade.Profit > 0 ? cTrade.Profit : 0,
+                    total_loss: cTrade.Profit < 0 ? cTrade.Profit : 0,
+                };
+                await addTrades_Commission([object])
 
                 // END
             }
@@ -945,7 +998,6 @@ const tri_AdddRecordIB_CommissionWallet = async (comm) => {
     BlockCommition = BlockCommition.recordset;
     _BlockCommition = BlockCommition[0].BlockCommition;
 
-    console.log("BlockCommition---->", _BlockCommition);
     // 	if @BlockCommition!=1
     // 	BEGIN
     if (_BlockCommition != 1) {
@@ -973,7 +1025,6 @@ const tri_AdddRecordIB_CommissionWallet = async (comm) => {
         ,CONCAT('Auto generate Commission ',${_SourceAccount}),1,(select GETDATE()) );`;
 
         const inrtComm = await pool.request().query(sql12);
-        console.log("INSERT  [IB_Commission_Wallet]", inrtComm);
         // 	END
     }
     // 	if @BlockCommition=1
@@ -984,7 +1035,6 @@ const tri_AdddRecordIB_CommissionWallet = async (comm) => {
         // 	END
         let sql13 = `update IB_Commission set commition_generated = 0 where Commission_Id = ${_Commission_Id};`;
         const inrtComm = await pool.request().query(sql13);
-        console.log("update IB_Commission", inrtComm);
     }
     // END
 }
@@ -999,11 +1049,11 @@ const getSeting = async () => {
      FROM [Setting] Where Setting_id = 1`;
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
-    console.log("getSeting", result.recordset);
+    // console.log("getSeting", result.recordset);
     result.recordset[0].auto_generate_commission_min = 300;
     settingList = result.recordset[0];
 
-    console.log("settingList", settingList.auto_generate_commission_min);
+    // console.log("settingList", settingList.auto_generate_commission_min);
     if (settingList?.auto_generate_commission_min)
         startCommissionScheduler('min', settingList.auto_generate_commission_min); // Runs every 5 minutes
 
@@ -1030,10 +1080,11 @@ const addTrades_Commission = async (objectArray) => {
                     total_amount = total_amount + ${object.total_amount},
                     total_profit = total_profit + ${object.total_profit},
                     total_loss = total_loss + ${object.total_loss},
+                    total_commission = total_commission + ${object.total_commission},
                     update_date = GETDATE()
             WHEN NOT MATCHED THEN
-                INSERT (traderId, trade_date, total_trade, total_lot, total_amount, total_profit, total_loss, create_date)
-                VALUES (${object.traderId}, '${object.trade_date}', ${object.total_trade}, ${object.total_lot}, ${object.total_amount}, ${object.total_profit}, ${object.total_loss}, GETDATE());
+                INSERT (traderId, trade_date, total_trade, total_lot, total_amount, total_profit, total_loss, create_date, total_commission)
+                VALUES (${object.traderId}, '${object.trade_date}', ${object.total_trade}, ${object.total_lot}, ${object.total_amount}, ${object.total_profit}, ${object.total_loss}, GETDATE(), ${object.total_commission});
         `;
 
         try {
@@ -1053,32 +1104,160 @@ const Trades_CommissionDateWish = async (params) => {
     let sql = ``;
     if (params.fromDate && params.toDate) {
         let condition = ``;
-        if(params.traderId){
+        if (params.traderId) {
             condition = ` AND traderId = ${params.traderId} `;
         }
-        sql = `SELECT SUM(total_trade) As total_trade, SUM(total_lot) AS total_lot, 
-        SUM(total_amount) AS total_amount, SUM(total_profit) AS total_profit, SUM(total_loss) AS total_loss
+        sql = `SELECT traderId,SUM(total_trade) As total_trade, SUM(total_lot) AS total_lot, 
+        SUM(total_amount) AS total_amount, SUM(total_profit) AS total_profit, SUM(total_loss) AS total_loss, 
+        SUM(total_commission) AS total_commission
         FROM [Trades_Commission] 
         WHERE  trade_date BETWEEN '${params.fromDate}' AND '${params.toDate} ${condition}'
         GROUP BY traderId ;
         `;
-    } else  {
+    } else {
         let condition = ``;
-        if(params.traderId){
+        if (params.traderId) {
             condition = ` WHERE traderId = ${params.traderId} `;
         }
 
-        sql = `SELECT SUM(total_trade) As total_trade, SUM(total_lot) AS total_lot, 
-        SUM(total_amount) AS total_amount, SUM(total_profit) AS total_profit, SUM(total_loss) AS total_loss
+        sql = `SELECT traderId, SUM(total_trade) As total_trade, SUM(total_lot) AS total_lot, 
+        SUM(total_amount) AS total_amount, SUM(total_profit) AS total_profit, SUM(total_loss) AS total_loss,
+        SUM(total_commission) AS total_commission
         FROM [Trades_Commission] ${condition}
         GROUP BY traderId `;
     }
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
-    console.log("Trades_CommissionDateWish", result.recordset);
-    return result.recordset;
+    // console.log("Trades_CommissionDateWish", result.recordset.length);
+    let summary = result.recordset.reduce((acc, curr) => {
+        acc.total_trade += curr.total_trade;
+        acc.total_lot += curr.total_lot;
+        acc.total_amount += curr.total_amount;
+        acc.total_profit += curr.total_profit;
+        acc.total_loss += curr.total_loss;
+        acc.total_commission += curr.total_commission;
+        return acc;
+    }, {
+        total_trade: 0,
+        total_lot: 0,
+        total_amount: 0,
+        total_profit: 0,
+        total_loss: 0,
+        total_commission: 0
+    });
+    return { response: result.recordset, summary: summary };
 
 
 }
- 
-module.exports = { generateCommition, processIBCommission, GenerateCommissionByDate, GenerateCommissionByToDate, tri_IBCommission, Trades_CommissionDateWish }
+
+const IBTrades_CommissionDateWish = async (params) => {
+
+    if (!params.traderId) {
+        return { result: false, message: "traderId is required" };
+    }
+
+
+    const pool = await poolPromise; // Connect to the database
+    let Trader_Id = params.traderId;
+    // Dynamic SQL query
+
+    let sql1 = ` WITH RecursiveCte AS 
+                    ( 
+                        SELECT 1 as Level, H1.Trader_Id, H1.Reffered_By, H1.Name, H1.Reffered_By_Account, H1.Referral_Code,
+                        H1.Email, H1.Created_On, H1.Status,
+                        H1.Phone  FROM[Profiles] H1
+                        WHERE H1.Trader_Id =   ${Trader_Id}
+                        UNION ALL 
+                        SELECT RCTE.level + 1 as Level, H2.Trader_Id, H2.Reffered_By, H2.Name, H2.Reffered_By_Account, H2.Referral_Code,
+                        H2.Email, H2.Created_On, H2.Status, 
+                        H2.Phone  FROM Profiles H2 
+                        INNER JOIN RecursiveCte RCTE ON H2.Reffered_By = RCTE.Trader_Id 
+                    ) 
+       SELECT  H1.Trader_Id, H1.Name, H1.Email,H1.Phone, H1.Reffered_By_Account, H1.Referral_Code,  H1.Created_On, 
+       H1.Status ,  H1.Reffered_By, H1.Level,   
+       ISNULL (A.Account ,0) Account , A.IBCommissionPlans , A.Plan_Id   
+       FROM RecursiveCte as H1 
+       join MT5_Profile_Account as A on H1.Trader_Id = A.Trader_Id
+          ORDER BY H1.Level, H1.Trader_Id `;
+
+    // Execute the query
+    const resultIB = await pool.request().query(sql1);
+
+    let row = resultIB.recordset;
+    row = row.filter((data) => data.Level != 1);
+    let Trader_Ids = row.map(data => data.Trader_Id);
+
+    if(Trader_Ids.length == 0){
+        return { response: [], summary: {
+            total_trade: 0,
+            total_lot: 0,
+            total_amount: 0,
+            total_profit: 0,
+            total_loss: 0,
+            total_commission: 0
+        } };
+
+    }
+
+    let sql = ``;
+    if (params.fromDate && params.toDate) {
+        let condition = ``;
+        sql = `SELECT traderId,SUM(total_trade) As total_trade, SUM(total_lot) AS total_lot, 
+        SUM(total_amount) AS total_amount, SUM(total_profit) AS total_profit, SUM(total_loss) AS total_loss,
+        SUM(total_commission) AS total_commission
+        FROM [Trades_Commission] 
+        WHERE  traderId IN (${Trader_Ids}) AND trade_date BETWEEN '${params.fromDate}' AND '${params.toDate} ${condition}'
+        GROUP BY traderId ;
+        `;
+    } else {
+        let condition = ``;
+
+        sql = `SELECT traderId,SUM(total_trade) As total_trade, SUM(total_lot) AS total_lot, 
+        SUM(total_amount) AS total_amount, SUM(total_profit) AS total_profit, SUM(total_loss) AS total_loss,
+        SUM(total_commission) AS total_commission
+        FROM [Trades_Commission] WHERE traderId IN (${Trader_Ids})  ${condition} 
+        GROUP BY traderId `;
+    }
+    const result = await pool.request().query(sql);
+
+    console.log("IBTrades_CommissionDateWish", result.recordset);
+
+    let resultIB2 = row.map(data => {
+
+        let trader = result.recordset.find(trader => trader.traderId == data.Trader_Id);
+        return {
+            ...trader,
+            ...data,
+            Level: data.Level - 1,
+
+        }
+    }).filter(data => data.Level != 0);
+
+    // sort by level
+    resultIB2.sort((a, b) => a.Level - b.Level);
+    console.log("resultIB2", resultIB2);
+
+    let summary = result.recordset.reduce((acc, curr) => {
+        acc.total_trade += curr.total_trade;
+        acc.total_lot += curr.total_lot;
+        acc.total_amount += curr.total_amount;
+        acc.total_profit += curr.total_profit;
+        acc.total_loss += curr.total_loss;
+        acc.total_commission += curr.total_commission;
+        return acc;
+    }, {
+        total_trade: 0,
+        total_lot: 0,
+        total_amount: 0,
+        total_profit: 0,
+        total_loss: 0,
+        total_commission: 0
+    });
+
+    console.log("summary", summary);
+    return { response: resultIB2, summary: summary };
+
+
+}
+
+module.exports = { generateCommition, processIBCommission, GenerateCommissionByDate, GenerateCommissionByToDate, tri_IBCommission, Trades_CommissionDateWish, IBTrades_CommissionDateWish }
