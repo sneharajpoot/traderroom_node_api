@@ -12,8 +12,13 @@ const getLastToTimestampFromDB = async () => {
 
     const result = await pool.request().query(sql);
 
-    let lastToTimestamp = result.recordset[0]?.To_Date || Date.now()
 
+    // uct time
+    let lastToTimestamp = moment(result.recordset[0]?.To_Date).utc().format('YYYY-MM-DD HH:mm:ss');
+    // console.log("lastToTimestamp", lastToTimestamp); 
+    // let lastToTimestamp = result.recordset[0]?.To_Date || Date.now()
+// 
+    
     return lastToTimestamp;
 };
 
@@ -29,15 +34,56 @@ const getIntervalMs = (type, value) => {
 };
 // Main scheduler
 
-const startCommissionScheduler = async (type = 'min', value = 1) => {
+isRunningCommitionGen:Boolean= false;
+const generateCommitionAPI = async () => {
 
-    const intervalMs = getIntervalMs(type, value);
-    console.log(`Scheduler started: ${type} ${value} every ${intervalMs} ms`);
-
-
+    if(isRunningCommitionGen) {
+        console.log("Already running commission generation");
+        return { result: false, message: "Already running commission generation" };
+    }
     const fromTimestamp = await getLastToTimestampFromDB();
 
     let sTime = await managerApi.TimeServer();
+    
+    const timestamp = sTime * 1000;
+    const date = new Date(timestamp);
+
+    const formattedUTC =
+        date.getUTCFullYear() + '-' +
+        String(date.getUTCMonth() + 1).padStart(2, '0') + '-' +
+        String(date.getUTCDate()).padStart(2, '0') + ' ' +
+        String(date.getUTCHours()).padStart(2, '0') + ':' +
+        String(date.getUTCMinutes()).padStart(2, '0') + ':' +
+        String(date.getUTCSeconds()).padStart(2, '0');
+
+    const toTimestamp = formattedUTC;// moment(sTime*1000).format('YYYY-MM-DD HH:mm:ss'); 
+
+    console.log("First fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
+    let col = {
+        From_Date: moment(fromTimestamp).format('YYYY-MM-DD HH:mm:ss'),
+        To_Date: toTimestamp,
+        Active: 1
+    }
+    let res = await GenerateCommissionByDate(col.From_Date, col.To_Date);
+}
+
+const startCommissionScheduler = async (type = 'min', value = 1) => {
+
+    const intervalMs = getIntervalMs(type, value);
+    // console.log(`Scheduler started: ${type} ${value} every ${intervalMs} ms`);
+
+
+    const fromTimestamp = await getLastToTimestampFromDB();
+    // current Global time to time stemp
+    // const toTimestamp = moment().format('YYYY-MM-DD HH:mm:ss'); 
+
+    // const toTimestamp = moment().utc().format('YYYY-MM-DD HH:mm:ss');
+
+    let sTime = await managerApi.TimeServer();
+
+    // console.log("sTime", sTime, moment(sTime*1000).toLocaleString(),  moment(sTime*1000)); // Convert to UTC
+    // console.log("sTime", new Date(sTime*1000)); // Convert to UTC
+    // console.log("dayjs", dayjs(sTime*1000).format('YYYY-MM-DD HH:mm:ss')); // Convert to UTC
 
     const timestamp = sTime * 1000;
     const date = new Date(timestamp);
@@ -62,7 +108,7 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
         To_Date: toTimestamp,
         Active: 1
     }
-    let res = await GenerateCommissionByDate(col.From_Date, col.To_Date);
+    // let res = await GenerateCommissionByDate(col.From_Date, col.To_Date);
 
     setInterval(async () => {
         // while (true) {
@@ -90,7 +136,7 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
         //   toDate: TD.format('YYYY-MM-DD') + ' 23:59:59',
 
         console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
-        // await GenerateCommissionByDate(fromTimestamp, toTimestamp);
+        await GenerateCommissionByDate(fromTimestamp, toTimestamp);
 
         let col = {
             From_Date: moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'),
@@ -390,6 +436,8 @@ const GenerateCommissionByToDate = async (toTimestemp) => {
 
 const GenerateCommissionByDate = async (fromTimestemp, toTimestemp) => {
 
+    isRunningCommitionGen = true;
+    // console.log("GenerateCommissionByDate", fromTimestemp, toTimestemp);
     let res = {};
 
     let gr = await managerApi.GetGroups();
@@ -463,10 +511,12 @@ const GenerateCommissionByDate = async (fromTimestemp, toTimestemp) => {
     if (resAddComm.result == false) {
         res.result = false;
         res.Message = "Unable to add commission date";
-        console.log("Unable to add commission date", resAddComm.Message);
-        return res;
+        // console.log("Unable to add commission date", resAddComm.Message);
+        // return res;
     }
 
+    isRunningCommitionGen = false;
+    return true;
 
 
 }
@@ -534,7 +584,7 @@ const CommissionTadeADD = async (col) => {
             const pool = await poolPromise;
             const request = pool.request();
             let res = await request.query(sql);
-            console.log("res", res);
+            // console.log("res", res);
             res.result = true;
             res.Message = "Trade Added Successfully";
         }
@@ -1050,10 +1100,10 @@ const getSeting = async () => {
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
     // console.log("getSeting", result.recordset);
-    result.recordset[0].auto_generate_commission_min = 300;
+    // result.recordset[0].auto_generate_commission_min = 300;
     settingList = result.recordset[0];
 
-    // console.log("settingList", settingList.auto_generate_commission_min);
+    console.log("settingList", settingList.auto_generate_commission_min);
     if (settingList?.auto_generate_commission_min)
         startCommissionScheduler('min', settingList.auto_generate_commission_min); // Runs every 5 minutes
 

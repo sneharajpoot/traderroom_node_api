@@ -46,7 +46,6 @@ describe('MT5TradeCopier Controller Functions', () => {
             // return done()
 
             const result = await addManager(mockManager);
-            console.log("result", result)
             expect(result).toHaveProperty('mngId');
         } catch (error) {
             console.log("error", error.message || error)
@@ -61,7 +60,6 @@ describe('MT5TradeCopier Controller Functions', () => {
 
             const result = await managerLogin({ mngId: mockManager.mngId });
             expect(result).toHaveProperty('message', 'Manager logged in successfully');
-            console.log("result", result)
             expect(result).toHaveProperty('mngId');
             done()
         } catch (error) {

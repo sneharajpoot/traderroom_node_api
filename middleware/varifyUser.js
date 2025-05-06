@@ -18,7 +18,6 @@ const verifyToken = (req, res, next) => {
 
     // Verify the token
     const decoded = jwt.verify(token, SECERET_KEY); // Replace 'yourSecretKey' with your secret or private key
-    console.log('decoded', decoded)
     req.user = decoded; // Add the decoded user data to the request object
     next(); // Call next() to pass control to the next middleware
   } catch (err) {

@@ -26,7 +26,6 @@ exports.addManager = async (data) => {
         const pool = await poolPromise;
         const request = pool.request();
 
-        console.log("data", data)
 
         // Retrieve manager details from the database
         const managerDetails = await request.query(`
@@ -40,7 +39,6 @@ exports.addManager = async (data) => {
         }
 
         const manager = managerDetails.recordset[0];
-        console.log("managerDetails", manager)
 
         // const manager = {
         //     "ServerName": "Demo Server",
@@ -64,7 +62,6 @@ exports.addManager = async (data) => {
         VALUES
             (0,'${manager.ServerName}', ${manager.ManagerId}, ${manager.ManagerId}, '${manager.ServerConfig}', '${manager.Password}', '', 0, '', '', GETDATE(), GETDATE())
     `);
-        console.log("addMng", addMng.rowsAffected)
 
         /**
          * result = {
@@ -75,14 +72,12 @@ exports.addManager = async (data) => {
          */
         const result = await addManager(manager.ManagerId, manager.ServerConfig, manager.Password);
 
-        console.log("result", result)
         // Update the result in the database after calling addManager
         let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET 
         [Result] = '${result.result}',  Useid = '${result.useid}',  [Password] = '${result.password}'
         WHERE [MngId] = ${manager.ManagerId} AND [ServerIp] = '${manager.ServerConfig}' `;
         let updatMng = await request.query(usql);
 
-        console.log("updatMng", updatMng)
 
         return result;
     } catch (error) {
@@ -102,14 +97,12 @@ exports.removeMaster = async (userid) => {
  
         const result = await removeMaster(userid );
 
-        console.log("result", result)
         // Update the result in the database after calling addManager
         // let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET  [IsDelete] = 1 WHERE [MngId] = MngId `;
         let uSql = await request.query(` UPDATE [dbo].[Copy_Master] SET [IsDelete] = 1  WHERE  [MasterAccountNumber] = ${userid}  ;`);
 
         let deleteMng = await request.query(uSql);
 
-        console.log("deleteMng", deleteMng)
 
         return deleteMng;
     } catch (error) {
@@ -134,12 +127,10 @@ exports.removeManager = async (mngId) => {
          */
         const result = await removeManager(checkMng.recordset[0].userid, checkMng.recordset[0].password );
 
-        console.log("result", result)
         // Update the result in the database after calling addManager
         let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET  [IsDelete] = 1 WHERE [MngId] = MngId `;
         let deleteMng = await request.query(usql);
 
-        console.log("deleteMng", deleteMng)
 
         return deleteMng;
     } catch (error) {
@@ -223,7 +214,6 @@ exports.resetDB = async () => {
     const reseTbl = await request.query(`  truncate table [Copy_Slave]; truncate table [Copy_Add_Manager];
  truncate table [Copy_Master]; 
  truncate table [Copy_Master_Performance]`)
-    console.log("reseTbl", reseTbl)
 
     return await resetDB();
 };
@@ -284,7 +274,6 @@ exports.addMaster = async (data) => {
             (0, ${body.masterAccountNumber}, '${body.password}', '${body.name}', ${body.numSalves}, ${body.salveseidt ? 1 : 0}, ${body.accountType}, ${body.TraderId}, '', GETDATE(), GETDATE(), 0, '', '', 0)
     `;
 
-        console.log("sql", sql)
         await request.query(sql);
         await exports.addPerformance({
             "Name": body.name,
@@ -298,8 +287,6 @@ exports.addMaster = async (data) => {
         });
 
         const result = await addMaster(body);
-        console.log("result", result)
-
 
         // Update the result in the database after calling addMaster
         let mres = await request.query(` 
@@ -307,7 +294,6 @@ exports.addMaster = async (data) => {
             UPDATE MT5_Profile_Account SET CopyAccountType = 'Master' WHERE MT5AccountId =${body.masterAccountNumber} ;
          
     `);
-        console.log("mres", mres)
 
         return result;
 
@@ -400,7 +386,6 @@ exports.getMasterDetails = async () => {
  * Description: Add a slave with the given details.
  */
 exports.addSlave = async (data) => {
-    console.log("data", data)
 
     let body = {
         "TraderId": Number(data.TraderId),
@@ -435,27 +420,21 @@ exports.addSlave = async (data) => {
 
 
     // Insert data into the database before calling addUser
-    console.log("data", data)
     let sql = ` INSERT INTO [dbo].[Copy_Slave]
             ([LoginId], [MLoginId], [Message], [Type], [TradeType], [FixVolume], [PriceType], [Multiplier], [RoundOf], [MinLot], [SPTP], [Percentage], [AccountType], [Comment], [CreatedBy], [CreateDate], [UpdateDate], [Active], [TraderId])
         VALUES
             (${body.loginid}, ${body.mloginid}, '${body.message}', ${body.type}, ${body.tradeType}, ${body.fixvolume}, ${body.priceType}, ${body.mutlipler}, ${body.roundof ? 1 : 0}, ${body.minLot ? 0 : 1}, ${body.sptp}, 0, 0, '', '', GETDATE(), GETDATE(), 1, ${body.TraderId}) `;
 
-    console.log("sql", sql)
     let resql = await request.query(sql);
-    console.log("resql", resql)
 
     const result = await addUser(body);
-    console.log("result", result)
 
     // Update the result in the database after calling addUser
     let usql = ` UPDATE [dbo].[Copy_Slave] SET [Comment] = '${JSON.stringify(result)}'  WHERE [LoginId] = ${body.loginid} AND [MLoginId] = ${body.mloginid};    
         UPDATE MT5_Profile_Account SET CopyAccountType = 'Slave' WHERE MT5AccountId =${body.loginid} ;
           `;
-    console.log("usql", usql)
     let ures = await request.query(usql);
 
-    console.log("ures", ures)
     return result;
 };
  
@@ -675,9 +654,7 @@ exports.getPerformance = async (TraderId) => {
             sql += ` WHERE cmp.TraderId = ${TraderId}`;
         }
 
-        console.log("sql", sql);
         let result = await request.query(sql);
-        console.log("result", result);
 
         return result.recordset;
     } catch (error) {

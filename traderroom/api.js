@@ -20,7 +20,6 @@ const getOpenTrade = async (Account) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);
@@ -47,7 +46,6 @@ const getUserInfo = async (lstAccount) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);
@@ -74,7 +72,6 @@ const GetUserInfoByAccountList = async (lstAccount) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);
@@ -101,7 +98,6 @@ const GetOpenTradeByUsers = async (lstAccount) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);
@@ -129,7 +125,6 @@ const getUsersOpenTradeNew = async (lstAccount) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);
@@ -160,7 +155,6 @@ const GetOpenTrade = async (MT5Accont) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);
@@ -192,7 +186,6 @@ const GetCloseTrade = async (MT5Accont,   _StartTm,  _EndTm) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        // console.log('API Response GetCloseTrade:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetCloseTrade API:', error.message);
@@ -219,7 +212,6 @@ const GetCloseTradeAllAccount = async (lstAccount, _StartTm, _EndTm) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetUserInfoAll API:', error.message);

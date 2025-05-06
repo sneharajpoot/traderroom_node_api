@@ -14,14 +14,10 @@ const GetGroups = async () => {
             'Content-Type': 'application/json'
         };
 
-        console.log('url---', url)
 
         // Make the GET request
         const response = await axios.get(url, { headers });
 
-        // Log and return the response
-        // console.log('API Response:', response.data );
-        // console.log('API Response:', response.data|| response);
         return response.data;
     } catch (error) {
         console.error('Error calling GetGroups API:', error.message);
@@ -45,7 +41,6 @@ const GetCloseTrade = async (MT5Accont, _StartTm, _EndTm) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetCloseTrade API:', error.message);
@@ -71,7 +66,6 @@ const GetCloseTradeAllAccount = async (lstAccount, _StartTm, _EndTm) => {
         const response = await axios.get(url + queryParams, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling GetCloseTradeAllAccount API:', error.message);
@@ -95,7 +89,6 @@ const TimeServer = async () => {
         const response = await axios.get(url, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error calling TimeServer API:', error.message);

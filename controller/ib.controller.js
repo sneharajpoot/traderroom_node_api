@@ -41,8 +41,6 @@ const getRecursiveData = async (traderId, page = 1, limit = 10) => {
         // let info = await getUserInfo(Accounts );
         let info = await trApi.getUserInfo(Accounts);
 
-        console.log("Trader Account: ", info)
-
         let sql1 = `  SELECT  MT5Account,
         SUM(CASE WHEN Deposit_Withdraw = 0 THEN Amount ELSE 0 END) AS Total_Deposit,
         SUM(CASE WHEN Deposit_Withdraw = 1 THEN Amount ELSE 0 END) AS Total_Withdraw
@@ -55,7 +53,6 @@ const getRecursiveData = async (traderId, page = 1, limit = 10) => {
 
         // [info, DW ]= await Promise.all[info, DW];
         let DW_Data = DW.recordset;
-        console.log(">DW_Data>>", DW_Data)
         // 605871, 605887, 605890, 605892, 605893, 605944, 605945,
         // console.log('-->', info)
         row = row.map(data => {
@@ -128,7 +125,6 @@ const getOpenTradeByUsers = async (traderId, page = 1, limit = 10) => {
         let Accounts = row.map(data => data.Account)
 
 
-        console.log("Trader Accounts: ", Accounts)
         //let info = await trApi.getUsersOpenTrade(Accounts);
         let info = await trApi.getUsersOpenTradeNew(Accounts);
         // let info = await trApi.getUsersOpenTrade([204728]);
@@ -145,7 +141,6 @@ const getOpenTradeByUsersNew = async (Accounts) => {
     try {
 
 
-        console.log("Trader Accounts: ", Accounts)
         let info = await trApi.getUsersOpenTradeNew(Accounts.split(','));
         // let info = await trApi.getUsersOpenTrade([204728]); 609301
 
@@ -202,7 +197,6 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
 
         let row = result.recordset;
         let Accounts = row.map(data => data.Account);
-        console.log('Accounts', Accounts)
 
         let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where where Status=1 and  MT5Account IN (${Accounts}) ;`
 
@@ -242,11 +236,9 @@ const getTransactionByuser = async (Account, page = 1, limit = 10 , Deposit_With
         let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account = ${Account} AND status = 1 ${cond}   ORDER BY ID 
             OFFSET ${(page - 1) * limit} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
 
-        console.log('lodas', sql1);
 
         let info = await pool.request().query(sql1);
         let dataTran = info.recordset;
-        console.log("dataTran", dataTran)
 
 
         return dataTran; // Return the result

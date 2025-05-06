@@ -19,7 +19,6 @@ const Test = async () => {
     const response = await axios.get(url, { headers });
 
     // Log and return the response
-    console.log('API Response:', response.data);
     return response.data;
 
 };
@@ -33,7 +32,6 @@ const InitialAddManager = async () => {
     const response = await axios.get(url, { headers });
 
     // Log and return the response
-    console.log('API Response:', response.data);
     return response.data;
 }
 
@@ -46,7 +44,6 @@ const Signup = async (oUserInfo) => {
     const response = await axios.post(url, oUserInfo, { headers });
 
     // Log and return the response
-    console.log('API Response:', response.data);
     return response.data;
 }
 
@@ -602,7 +599,6 @@ const setaccess_token = async () => {
         const response = await axios.get(url, { headers });
 
         // Log and return the response
-        console.log('API Response:', response.data);
         return response.data;
     } catch (error) {
         console.error('Error setting access token:', error.message);

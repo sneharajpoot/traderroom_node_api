@@ -5,7 +5,6 @@ const hasTag = (...allowedTag) => {
     return compose().use((req, res, next) => {
       var allowed = false;
       if (req.user) {
-        console.log(req.user, 'USER');
         allowedTag.forEach((element, index) => {
           if (req.user.access_metrix_tags.indexOf(element) > -1) {
             allowed = true;

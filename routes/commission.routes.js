@@ -19,14 +19,9 @@ router.get('/commission/GenerateCommissionByDate', async (req, res) => {
         // const fromDate = req.query.fromDate || '2025-04-03 00:00:00';  // Get the query parameters from the request
         const toDate = req.query.toDate || '2025-04-04 23:59:59'; // Get the query parameters from the request
 
-
-        console.log(" toDate", toDate)
-
-
         // let fD = moment(fromDate);
         let TD = moment(toDate);
         let dd = moment();
-        console.log("fromDate, toDate", ' ---- ', TD, " current:", dd)
  
         if (TD.format('YYYY-MM-DD hh:mm:ss') >= dd.format('YYYY-MM-DD hh:mm:ss')) {
             throw new Error("To Date Not grater then Now");
@@ -50,13 +45,11 @@ router.get('/commission/GenerateCommissionByDate', async (req, res) => {
         const toDate = req.query.toDate || '2025-04-04 23:59:59'; // Get the query parameters from the request
 
 
-        console.log("fromDate, toDate", fromDate, toDate)
 
 
         let fD = moment(fromDate);
         let TD = moment(toDate);
         let dd = moment();
-        console.log("fromDate, toDate", fD, ' ---- ', TD, " current:", dd)
 
 
         if (fD.format('YYYY-MM-DD') >= dd.format('YYYY-MM-DD')) {
