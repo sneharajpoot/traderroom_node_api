@@ -11,24 +11,25 @@ const moment = require('moment')
 // Route to add managers
 router.get('/commission/GenerateCommission', async (req, res) => {
     try {
-
-        const resultM = await commissionController.generateCommitionAPI();
+        const resultM = await commissionController.generateCommitionAPI(req.query.toTimestamp);
         res.status(200).json({ Message: 'Commission Generate  ', result: true, response: resultM });
     } catch (error) {
         console.log("Error", error.message || error);
         res.status(500).json({ result: false, Message: error.message });
     }
 });
-
-router.get('/commission/tri_IBCommission', async ( req, res) => {
+ 
+router.get('/commission/MapGenerateCommission', async (req, res) => {
     try {
-        const resultM = await commissionController.tri_IBCommission( );
+        const resultM = await commissionController.generateCommitionMAPAPI(req.query.fromTimestamp, req.query.toTimestamp);
         res.status(200).json({ Message: 'Commission Generate  ', result: true, response: resultM });
     } catch (error) {
-        console.log("Error", error|| error);
+        console.log("Error", error.message || error);
         res.status(500).json({ result: false, Message: error.message });
     }
 });
+ 
+
  
 router.post('/commission/Trades_CommissionDateWish', async (req, res) => {
     try {

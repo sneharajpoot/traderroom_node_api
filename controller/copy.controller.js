@@ -89,13 +89,13 @@ exports.addManager = async (data) => {
 
 
 exports.removeMaster = async (userid) => {
-    try { 
- 
+    try {
+
         const pool = await poolPromise;
         const request = pool.request();
- 
- 
-        const result = await removeMaster(userid );
+
+
+        const result = await removeMaster(userid);
 
         // Update the result in the database after calling addManager
         // let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET  [IsDelete] = 1 WHERE [MngId] = MngId `;
@@ -112,9 +112,9 @@ exports.removeMaster = async (userid) => {
     }
 };
 exports.removeManager = async (mngId) => {
-    try { 
+    try {
         const checkMng = await request.query(` SELECT * FROM [dbo].[Copy_Add_Manager] WHERE IsDelete != 1 and [MngId] = ${mngId}  `);
-        if (checkMng.recordset.length !==1) {
+        if (checkMng.recordset.length !== 1) {
             throw new Error("Manager not exist");
         }
 
@@ -125,7 +125,7 @@ exports.removeManager = async (mngId) => {
         "password": "LKq7EGHsMXIfV0osLs2M4g=="
     }
          */
-        const result = await removeManager(checkMng.recordset[0].userid, checkMng.recordset[0].password );
+        const result = await removeManager(checkMng.recordset[0].userid, checkMng.recordset[0].password);
 
         // Update the result in the database after calling addManager
         let usql = ` UPDATE [dbo].[Copy_Add_Manager] SET  [IsDelete] = 1 WHERE [MngId] = MngId `;
@@ -175,7 +175,7 @@ exports.generateToken = async () => {
  * Input: { "mngId": 0 }
  * mngId -> int (MT5 manager Account id)
  */
-exports.managerLogin = async (mngId) => { 
+exports.managerLogin = async (mngId) => {
 
     return await managerLogin(mngId);
     // return await managerLogin(10033);
@@ -304,7 +304,7 @@ exports.addMaster = async (data) => {
 };
 
 exports.enableSubscription = async (data) => {
-    try { 
+    try {
         // add validation
         if (!data.masterAccountNumber) {
             throw new Error("MasterAccountNumber is mandatory");
@@ -318,7 +318,7 @@ exports.enableSubscription = async (data) => {
 
         // Update the result in the database after calling addMaster
         let mres = await request.query(` 
-            UPDATE [dbo].[Copy_Master] SET [enableSubscription] = ${data.isEnable?1:0} 
+            UPDATE [dbo].[Copy_Master] SET [enableSubscription] = ${data.isEnable ? 1 : 0} 
             WHERE  [MasterAccountNumber] = ${data.masterAccountNumber}  ; 
          
     `);
@@ -436,7 +436,7 @@ exports.addSlave = async (data) => {
 
     return result;
 };
- 
+
 // /Home/removeUser
 
 /**
@@ -500,7 +500,7 @@ exports.updateUser = async (data) => {
  * mngId -> int (MT5 slave account id)
  */
 exports.removeUser = async (userid) => {
-    let resu =  await removeUser({userid});
+    let resu = await removeUser({ userid });
 
     // update in Copy_Slave
     const pool = await poolPromise;

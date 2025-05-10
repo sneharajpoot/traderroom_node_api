@@ -17,7 +17,7 @@ const getalluserList = async () => {
     }
 };
 
-const  getKycUser = async ( fType,   Search,  Kyc_Status,  index,  count)=> {
+const getKycUser = async (fType, Search, Kyc_Status, index, count) => {
     const pool = await poolPromise;
     let FilterType = {
         NAME: 1,
@@ -27,18 +27,18 @@ const  getKycUser = async ( fType,   Search,  Kyc_Status,  index,  count)=> {
     }
     // KYCSTATUS
 
-    
-    let plist = {Profiles:[], Count:0};
+
+    let plist = { Profiles: [], Count: 0 };
     // return plist;
 
     let ulist = [];
     // Profile_Count_Obj plist = new Profile_Count_Obj();
 
-    let  Count = 0;
+    let Count = 0;
     let sql1 = " ";
-    
+
     sql1 += " SELECT  count(Trader_Id) As Count FROM [Profiles]" +
-        " where Kyc_Status=" +  Kyc_Status + " and (1!=1  ";
+        " where Kyc_Status=" + Kyc_Status + " and (1!=1  ";
 
     if (fType == FilterType.NAME || fType == FilterType.ALL)
         sql1 += " or Name like '%" + Search + "%'";
@@ -70,13 +70,13 @@ const  getKycUser = async ( fType,   Search,  Kyc_Status,  index,  count)=> {
 
 
     sql1 = " select * from ( SELECT [Trader_Id] ,[Name],[Password],[Email],[Phone]" +
-      " ,[City],[Country],[State],[Zip_Code]  ,[Leverage]" +
-      " ,[Plan_Id] ,  [Id_proof],[Address_Proof],  Kyc_Status ," +
-      " ROW_NUMBER() OVER ( ORDER BY Trader_Id desc) AS RowNum, " +
-      " Other_Proof, Kyc_Comment " +
+        " ,[City],[Country],[State],[Zip_Code]  ,[Leverage]" +
+        " ,[Plan_Id] ,  [Id_proof],[Address_Proof],  Kyc_Status ," +
+        " ROW_NUMBER() OVER ( ORDER BY Trader_Id desc) AS RowNum, " +
+        " Other_Proof, Kyc_Comment " +
         "  profession,  sources_of_funds,  financial_details " +
-      " FROM [Profiles]";
-    sql1 +=" Where Kyc_Status=" + Kyc_Status + "  and ( 1!=1   ";
+        " FROM [Profiles]";
+    sql1 += " Where Kyc_Status=" + Kyc_Status + "  and ( 1!=1   ";
 
     if (fType == FilterType.NAME || fType == FilterType.ALL)
         sql1 += " or Name like '%" + Search + "%'";
@@ -89,13 +89,12 @@ const  getKycUser = async ( fType,   Search,  Kyc_Status,  index,  count)=> {
 
 
     sql1 += " )  )as c " +
-      " where   RowNum >= " + (((index - 1) * count) + 1) + "  AND RowNum <" + ((((index - 1) * count) + count) + 1);
+        " where   RowNum >= " + (((index - 1) * count) + 1) + "  AND RowNum <" + ((((index - 1) * count) + count) + 1);
 
 
     //sql += " order by trader_id desc ";
 
-    try
-    {
+    try {
         // using (SqlCommand cmd = new SqlCommand(sql1, oConnection))
         // {
         //     using (SqlDataReader reader = cmd.ExecuteReader())
@@ -142,37 +141,36 @@ const  getKycUser = async ( fType,   Search,  Kyc_Status,  index,  count)=> {
         //     }
         // }
 
-        
-    const List = await pool.request().query(sql1); 
-    ulist = List.recordset.map((row) => {
-        return {
-            Trader_Id: row.Trader_Id,
-            Name: row.Name,
-            Password: row.Password,
-            Email: row.Email,
-            Phone: row.Phone,
-            City: row.City,
-            Country: row.Country,
-            State: row.State,
-            Zip_Code: row.Zip_Code,
-            Leverage: row.Leverage,
-            Plan_Id: row.Plan_Id || 0,
-            Id_proof: row.Id_proof,
-            Address_Proof: row.Address_Proof,
-            Kyc_Status: row.Kyc_Status,
-            Other_Proof: row.Other_Proof || "",
-            Kyc_Comment: row.Kyc_Comment || "",
-            profession: row.profession || "",
-            sources_of_funds: row.sources_of_funds || "",
-            financial_details: row.financial_details || ""
-        };
-    })
+
+        const List = await pool.request().query(sql1);
+        ulist = List.recordset.map((row) => {
+            return {
+                Trader_Id: row.Trader_Id,
+                Name: row.Name,
+                Password: row.Password,
+                Email: row.Email,
+                Phone: row.Phone,
+                City: row.City,
+                Country: row.Country,
+                State: row.State,
+                Zip_Code: row.Zip_Code,
+                Leverage: row.Leverage,
+                Plan_Id: row.Plan_Id || 0,
+                Id_proof: row.Id_proof,
+                Address_Proof: row.Address_Proof,
+                Kyc_Status: row.Kyc_Status,
+                Other_Proof: row.Other_Proof || "",
+                Kyc_Comment: row.Kyc_Comment || "",
+                profession: row.profession || "",
+                sources_of_funds: row.sources_of_funds || "",
+                financial_details: row.financial_details || ""
+            };
+        })
 
 
     }
-    catch (  ex)
-    {
-        console.log("Exception >> {0} : {1}",  ex.message || ex);
+    catch (ex) {
+        console.log("Exception >> {0} : {1}", ex.message || ex);
         logs("Exception: " + ex.message || ex);
 
     }

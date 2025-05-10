@@ -230,17 +230,17 @@ const getTransaction = async (Trader_Id, page = 1, limit = 10) => {
     }
 }
 
-const getTransactionByuser = async (Account, page = 1, limit = 10 , Deposit_Withdraw =null) => {
+const getTransactionByuser = async (Account, page = 1, limit = 10, Deposit_Withdraw = null) => {
     try {
         const pool = await poolPromise; // Connect to the database
 
         let cond = '';
 
-        if(  Deposit_Withdraw==0 || Deposit_Withdraw == 1) {
+        if (Deposit_Withdraw == 0 || Deposit_Withdraw == 1) {
 
             cond = ` AND Deposit_Withdraw = ${Deposit_Withdraw}`;
-        } 
-        
+        }
+
         let sql1 = `SELECT * FROM [Wallet_AutoManualPayment] where MT5Account = ${Account} AND status = 1 ${cond}   ORDER BY ID 
             OFFSET ${(page - 1) * limit} ROWS FETCH NEXT ${limit} ROWS ONLY;`;
 
@@ -302,28 +302,28 @@ const getDashboardData = async () => {
 
         let payments = pool.request().query(sql2);
         // let paymentsCount = payments.recordset;
-        
+
         let totalDeposit = pool.request().query(sql3);
         //  totalDeposit = totalDeposit.recordset;
-        
+
         let totalWithdraw = pool.request().query(sql4);
         // totalWithdraw = payments.recordset;
 
-        let resData = await Promise.allSettled([profiles, payments, totalDeposit, totalWithdraw ]);
-        
+        let resData = await Promise.allSettled([profiles, payments, totalDeposit, totalWithdraw]);
+
         let kycStatusCount = resData[0].value.recordset;
         let paymentsCount = resData[1].value.recordset;
         totalDeposit = resData[2].value.recordset[0].total_deposit;
-        totalWithdraw = resData[3].value.recordset[0].total_Withdraw; 
+        totalWithdraw = resData[3].value.recordset[0].total_Withdraw;
 
-        
+
         kycStatusCount = kycStatusCount.map(data => {
             data.Kyc_Status = kycStatus[data.Kyc_Status]
             return data;
         });
 
         paymentsCount = paymentsCount.map(data => {
-            data.Deposit_Withdraw = data.Deposit_Withdraw ? 'Withdraw':'Deposit'
+            data.Deposit_Withdraw = data.Deposit_Withdraw ? 'Withdraw' : 'Deposit'
             data.Status = paymentStatus[data.Status]
 
             return data;
@@ -345,7 +345,7 @@ const getDashboardData = async () => {
         //        { total_count: 90, Deposit_Withdraw: 1, Status: 1 }   
         //      ]
 
-        return  {kycStatusCount, paymentsCount, totalDeposit, totalWithdraw}; // Return the result
+        return { kycStatusCount, paymentsCount, totalDeposit, totalWithdraw }; // Return the result
     } catch (err) {
         console.error('Error executing query:', err.message);
         throw err;

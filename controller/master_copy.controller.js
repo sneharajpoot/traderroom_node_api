@@ -62,7 +62,7 @@ const updateMasterFields = async (id, fields) => {
         throw err;
     }
 };
- 
+
 // Reject Master Request
 const rejectMaster = async (id, rejectionReason) => {
     try {
@@ -113,4 +113,4 @@ const getActiveMasters = async (page, limit) => {
 };
 
 module.exports = { getPendingMasters, approveMaster, updateMasterFields, rejectMaster, getActiveMasters };
- 
+

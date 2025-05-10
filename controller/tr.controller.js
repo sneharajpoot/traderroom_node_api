@@ -3,8 +3,8 @@ const managerApi = require('../traderroom/manager-api')
 
 
 // Fetch Pending Requests with Pagination
-const GetGroups = async ( ) => {
-    try { 
+const GetGroups = async () => {
+    try {
 
         const result = await managerApi.GetGroups();
         return result;
@@ -13,7 +13,7 @@ const GetGroups = async ( ) => {
         throw err;
     }
 };
- 
 
-module.exports = { GetGroups  };
- 
+
+module.exports = { GetGroups };
+

@@ -78,6 +78,7 @@ const TimeServer = async () => {
         // API URL
         const url = `${rootUrl}/TimeServer`; // Replace with your actual API URL
 
+        console.log('url', url);
         // Request headers
         const headers = {
             'x-token': '1000', // Replace with your x-token value
