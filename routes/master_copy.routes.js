@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const { getPendingMasters, approveMaster, updateMasterFields } = require('../controller/master_copy.controller');
-// const ibControler = require('../controller/ib.controler');
 
 // Fetch Pending Masters with Pagination
 router.get('/masters/pending', async (req, res) => {

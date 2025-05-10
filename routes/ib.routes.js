@@ -1,4 +1,4 @@
-const ibControler = require('../controller/ib.controller.js');
+const ibController = require('../controller/ib.controller.js');
 
 const express = require("express");
 
@@ -14,7 +14,7 @@ const router = express.Router();
 router.get("/get-ib", async (req, res) => {
   try {
 
-    let result = await ibControler.getRecursiveData(req.query.Trader_Id, req.query.page || 1, req.query.limit || 10)
+    let result = await ibController.getRecursiveData(req.query.Trader_Id, req.query.page || 1, req.query.limit || 10)
 
     res.status(200).json({ result: true, message: "ib ", data: result });
 
@@ -34,7 +34,7 @@ router.get("/get-ib", async (req, res) => {
 router.get("/get-ib-trades", async (req, res) => {
   try {
 
-    let result = await ibControler.getOpenTradeByUsers(req.query.Trader_Id, req.query.page || 1, req.query.limit || 10)
+    let result = await ibController.getOpenTradeByUsers(req.query.Trader_Id, req.query.page || 1, req.query.limit || 10)
 
     res.status(200).json({ result: true, message: "ib ", data: result });
 
@@ -55,7 +55,7 @@ router.get("/get-ib-trades", async (req, res) => {
 router.get("/get-trades", async (req, res) => {
   try {
 
-    let result = await ibControler.getOpenTrade(req.query.Account)
+    let result = await ibController.getOpenTrade(req.query.Account)
 
     res.status(200).json({ result: true, message: "ib ", data: result });
 
@@ -74,7 +74,7 @@ router.get("/get-trades", async (req, res) => {
 router.get("/get-trades-new", async (req, res) => {
   try {
 
-    let result = await ibControler.getOpenTradeByUsersNew(req.query.Account)
+    let result = await ibController.getOpenTradeByUsersNew(req.query.Account)
 
     res.status(200).json({ result: true, message: "ib ", data: result });
 
@@ -93,7 +93,7 @@ router.get("/get-trades-new", async (req, res) => {
 router.get("/get-ib-transaction", async (req, res) => {
   try {
 
-    let result = await ibControler.getTransaction(req.query.Trader_Id)
+    let result = await ibController.getTransaction(req.query.Trader_Id)
 
     res.status(200).json({ result: true, message: "ib ", data: result });
 
@@ -111,7 +111,7 @@ router.get("/get-ib-transaction", async (req, res) => {
 router.get("/get-user-transaction", async (req, res) => {
   try {
 
-    let result = await ibControler.getTransactionByuser(req.query.Account, req.query.page, req.query.limit,req.query.Deposit_Withdraw)
+    let result = await ibController.getTransactionByuser(req.query.Account, req.query.page, req.query.limit,req.query.Deposit_Withdraw)
 
     res.status(200).json(result );
 
@@ -130,7 +130,7 @@ router.get("/get-open-trades", async (req, res) => {
 
   try {
 
-    let result = await ibControler.GetOpenTrade(req.query.Account)
+    let result = await ibController.GetOpenTrade(req.query.Account)
 
     res.status(200).json( result );
 
@@ -152,7 +152,7 @@ router.get("/get-dashboard-data", async (req, res) => {
   
   try {
 
-    let result = await ibControler.getDashboardData()
+    let result = await ibController.getDashboardData()
 
     res.status(200).json({ result: true, message: "ib ", data: result });
 

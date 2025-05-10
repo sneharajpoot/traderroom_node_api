@@ -4,7 +4,10 @@ require("dotenv").config(); // Corrected dotenv import
 const bodyParser = require("body-parser"); // Keep if planning to use
 const cors = require("cors"); // Keep if planning to use
 const morgan = require('morgan');
-console.log("superSecret", process.env.SECERET_KEY); // secret variable
+// console.log("superSecret", process.env.SECERET_KEY); // secret variable
+
+const { startGetSettingInNewThread } = require('./worker/commissionSchedulerThread');
+
 
 
 const { sql, poolPromise } = require('./db'); // Import the connection
@@ -87,10 +90,36 @@ app.use('/api',Router.ibRoute)
 app.use('/api',Router.masterCopyRoutes)
 app.use('/api',Router.copyRoutes)
 app.use('/api',Router.commissionRoutes)
-app.use('/api', Router.trRoutes)
+app.use('/api', Router.trRoutes);
+app.use('/api', Router.userRoutes); // Uncomment if you have user routes
 // Start the server
  const port = process.env.PORT || 8081;
 // const port =  8082;
-app.listen(port, () => {
-  console.log(`Server started on port http://localhost:${port}/`);
-});
+// app.listen(port, () => {
+//   console.log(`Server started on port http://localhost:${port}/`);
+
+  
+// // Start the worker thread for `getSeting`
+// startGetSettingInNewThread();
+
+// console.log('Application started. Worker thread for getSeting initialized.');
+// });
+
+
+// Ensure DB connection is established before starting the server and worker thread
+poolPromise
+  .then(() => {
+    console.log('Database connected successfully.');
+
+    // Start the server
+    app.listen(port, () => {
+      console.log(`Server started on port http://localhost:${port}/`);
+
+      // Start the worker thread for `getSeting`
+      startGetSettingInNewThread();
+      console.log('Application started. Worker thread for getSeting initialized.');
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to connect to the database. Server not started.', err.message);
+  });

@@ -2,7 +2,6 @@ const { poolPromise } = require('../db');
 const trApi = require('../traderroom/api')
 const managerApi = require('../traderroom/manager-api')
 const moment = require('moment'); // or use native Date
-const dayjs = require('dayjs');
 // -----------------
 
 const getLastToTimestampFromDB = async () => {
@@ -17,8 +16,8 @@ const getLastToTimestampFromDB = async () => {
     let lastToTimestamp = moment(result.recordset[0]?.To_Date).utc().format('YYYY-MM-DD HH:mm:ss');
     // console.log("lastToTimestamp", lastToTimestamp); 
     // let lastToTimestamp = result.recordset[0]?.To_Date || Date.now()
-// 
-    
+    // 
+
     return lastToTimestamp;
 };
 
@@ -34,17 +33,17 @@ const getIntervalMs = (type, value) => {
 };
 // Main scheduler
 
-isRunningCommitionGen:Boolean= false;
+// isRunningCommitionGen: Boolean = false;
 const generateCommitionAPI = async () => {
 
-    if(isRunningCommitionGen) {
+    if (isRunningCommitionGen) {
         console.log("Already running commission generation");
         return { result: false, message: "Already running commission generation" };
     }
     const fromTimestamp = await getLastToTimestampFromDB();
 
     let sTime = await managerApi.TimeServer();
-    
+
     const timestamp = sTime * 1000;
     const date = new Date(timestamp);
 
@@ -81,6 +80,10 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
 
     let sTime = await managerApi.TimeServer();
 
+    if (!(sTime > 0)) {
+        console.error("Invalid interval specified. Please provide a valid type and value.");
+        return;
+    }
     // console.log("sTime", sTime, moment(sTime*1000).toLocaleString(),  moment(sTime*1000)); // Convert to UTC
     // console.log("sTime", new Date(sTime*1000)); // Convert to UTC
     // console.log("dayjs", dayjs(sTime*1000).format('YYYY-MM-DD HH:mm:ss')); // Convert to UTC
@@ -102,7 +105,7 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
     const toTimestamp = formattedUTC;// moment(sTime*1000).format('YYYY-MM-DD HH:mm:ss'); 
     // console.log("toTimestamp", toTimestamp);
 
-    console.log("First fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
+    console.log("First From Date: ", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ----To Date: ', toTimestamp);
     let col = {
         From_Date: moment(fromTimestamp).format('YYYY-MM-DD HH:mm:ss'),
         To_Date: toTimestamp,
@@ -136,24 +139,19 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
         //   toDate: TD.format('YYYY-MM-DD') + ' 23:59:59',
 
         console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
-        await GenerateCommissionByDate(fromTimestamp, toTimestamp);
+        let res = await GenerateCommissionByDate(fromTimestamp, toTimestamp);
 
         let col = {
             From_Date: moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'),
             To_Date: toTimestamp,//.format('YYYY-MM-DD hh:mm:ss'),
             Active: 1
         }
-        let res = await GenerateCommissionByDate(col.From_Date, col.To_Date);
         // let resAddComm = await AddIBCommissionDate_Object(col);
 
         // console.log("resAddComm", resAddComm)
         // }
     }, intervalMs);
 };
-
-//   startCommissionScheduler('min', 5); // Runs every 5 minutes
-// startCommissionScheduler('min', 30); // Runs every 5 minutes
-// --------------
 
 
 const generateCommition = async (trad) => {
@@ -327,7 +325,7 @@ const generateCommition = async (trad) => {
 }
 
 
-async function processIBCommission(tradeId) {
+const processIBCommission = async (tradeId) => {
     try {
         const pool = await poolPromise;
         const request = pool.request();
@@ -436,87 +434,95 @@ const GenerateCommissionByToDate = async (toTimestemp) => {
 
 const GenerateCommissionByDate = async (fromTimestemp, toTimestemp) => {
 
-    isRunningCommitionGen = true;
-    // console.log("GenerateCommissionByDate", fromTimestemp, toTimestemp);
-    let res = {};
+    try {
 
-    let gr = await managerApi.GetGroups();
+        isRunningCommitionGen = true;
+        // console.log("GenerateCommissionByDate", fromTimestemp, toTimestemp);
+        let res = {};
 
-    // console.log('Group', gr);
+        let gr = await managerApi.GetGroups();
 
-    if (gr.lstGroups.Count <= 0) {
-        res.result = false;
-        res.Message = " Unable to connect manager.";
+        // console.log('Group', gr);
 
-        return res;
-    }
+        if (gr.lstGroups.Count <= 0) {
+            res.result = false;
+            res.Message = " Unable to connect manager.";
 
-    const isfromDate = await isDateExists(fromTimestemp)
-    const istoDate = await isDateExists(toTimestemp)
-    // console.log("isfromDate, istoDate", isfromDate, istoDate)
-    // if (isfromDate > 0 || istoDate > 0) {
-    //     Console.WriteLine("Already Gen Commition");
-    //     res.result = false;
-    //     res.Message = "Already Gen Commition";
-    //     return res;
-    // }
+            return res;
+        }
 
-    let col = {
-        From_Date: fromTimestemp,
-        To_Date: toTimestemp,
-        Active: 1
-    }
+        const isfromDate = await isDateExists(fromTimestemp)
+        const istoDate = await isDateExists(toTimestemp)
+        // console.log("isfromDate, istoDate", isfromDate, istoDate)
+        // if (isfromDate > 0 || istoDate > 0) {
+        //     Console.WriteLine("Already Gen Commition");
+        //     res.result = false;
+        //     res.Message = "Already Gen Commition";
+        //     return res;
+        // }
+
+        let col = {
+            From_Date: fromTimestemp,
+            To_Date: toTimestemp,
+            Active: 1
+        }
 
 
-    let sql = " SELECT p.Trader_Id ,p.Email,p.Reffered_By,p.Reffered_By_Account,pa.Account, " +
-        " pa.IBCommissionPlans   " +
-        " FROM dbo.Profiles as p " +
-        " join MT5_Profile_Account as pa on p.Trader_Id = pa.Trader_Id   " +
-        // " Where Reffered_By_Account!= 0  and Status=1 and Account = 629131";
-        " Where Reffered_By_Account!= 0  and Status=1  ";
+        let sql = " SELECT p.Trader_Id ,p.Email,p.Reffered_By,p.Reffered_By_Account,pa.Account, " +
+            " pa.IBCommissionPlans   " +
+            " FROM dbo.Profiles as p " +
+            " join MT5_Profile_Account as pa on p.Trader_Id = pa.Trader_Id   " +
+            // " Where Reffered_By_Account!= 0  and Status=1 and Account = 629131";
+            " Where Reffered_By_Account!= 0  and Status=1  ";
 
-    let pool = await poolPromise;
-    const result = await pool.request().query(sql);
-    let dt = result.recordset;
+        let pool = await poolPromise;
+        const result = await pool.request().query(sql);
+        let dt = result.recordset;
 
-    console.log("IB Accounts", dt.length);
+        console.log("IB Accounts", dt.length);
 
-    col.no_of_account = dt.length;
-    col.no_of_trade = 0;
-    for (let i = 0; i < dt.length; i++) {
+        col.no_of_account = dt.length;
+        col.no_of_trade = 0;
+        for (let i = 0; i < dt.length; i++) {
 
-        let Account = dt[i].Account;
-        let Trader_Id = dt[i].Trader_Id;
+            let Account = dt[i].Account;
+            let Trader_Id = dt[i].Trader_Id;
 
-        // get close commition
-        let clt = await GetCloseTrade(Account, fromTimestemp, toTimestemp);
-        console.log(i + " -Account-", Account, ' | lstCLOSE', clt.lstCLOSE.length, ' Trader_Id:', Trader_Id, 'Time:', fromTimestemp, ' - ', toTimestemp);
-        if (clt.lstCLOSE.length > 0) {
+            // get close commition
+            let clt = await GetCloseTrade(Account, fromTimestemp, toTimestemp);
+            console.log(i + " -Account-", Account, ' | lstCLOSE', clt.lstCLOSE.length, ' Trader_Id:', Trader_Id, 'Time:', fromTimestemp, ' - ', toTimestemp);
+            if (clt.lstCLOSE.length > 0) {
 
-            col.no_of_trade += clt.lstCLOSE.Count;
+                col.no_of_trade += clt.lstCLOSE.Count;
 
-            clt.lstCLOSE = clt.lstCLOSE.map(data => { data.Trader_Id = Trader_Id; return data; });
+                clt.lstCLOSE = clt.lstCLOSE.map(data => { data.Trader_Id = Trader_Id; return data; });
 
-            res = CommissionTadeADD(clt.lstCLOSE);
+                res = CommissionTadeADD(clt.lstCLOSE);
+
+            }
+
+
 
         }
 
 
 
+        let resAddComm = await AddIBCommissionDate_Object(col);
+        if (resAddComm.result == false) {
+            res.result = false;
+            res.Message = "Unable to add commission date";
+            // console.log("Unable to add commission date", resAddComm.Message);
+            // return res;
+        }
+
+        isRunningCommitionGen = false;
+        return true;
+
+    } catch (error) {
+        console.error("Error in GenerateCommissionByDate:", error);
+        return { result: false, message: error.message };
+
     }
-
-
-
-    let resAddComm = await AddIBCommissionDate_Object(col);
-    if (resAddComm.result == false) {
-        res.result = false;
-        res.Message = "Unable to add commission date";
-        // console.log("Unable to add commission date", resAddComm.Message);
-        // return res;
-    }
-
-    isRunningCommitionGen = false;
-    return true;
 
 
 }
@@ -646,8 +652,6 @@ const isDateExists = async (date) => {
 
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
-    // console.log("isDateExists", result.recordset);
-    // console.log("isDateExists", result);
     resCount = result.recordset[0].tRecord;
     return resCount;
 }
@@ -696,7 +700,6 @@ const tri_IBCommission = async (trade) => {
             if (trad1.recordset.length == 0) {
                 throw new Error("No trad found");
             }
-            // console.log("for test only", trad1.recordset);
             let trad1_data = trad1.recordset;
             _MT5Account = trad1_data[0].MT5Account;
             _Ticket = trad1_data[0].Ticket;
@@ -769,13 +772,10 @@ const tri_IBCommission = async (trade) => {
                 let sql6 = ` Select Reffered_By from Profiles Where Trader_Id=${_Reffered_By};`;
                 let Reffered_By_prof = await pool.request().query(sql6);
                 Reffered_By_prof = Reffered_By_prof.recordset;
-                // console.log("Reffered_By_prof", Reffered_By_prof);
 
                 _Reffered_By = Reffered_By_prof[0]?.Reffered_By || 0;
                 // END
             }
-
-            // console.log("lvl", _lvl);
 
             // 		if @lvl!=0
             // 		BEGIN
@@ -993,8 +993,6 @@ const tri_IBCommission = async (trade) => {
 // { Commission_Id:'', Trader_Id:'', Commission:'', Source:'', SourceAccount:'', Ticket:'', Levels:'',}
 const tri_AdddRecordIB_CommissionWallet = async (comm) => {
 
-    console.log("tri_AdddRecordIB_CommissionWallet", comm);
-
     let pool = await poolPromise;
     /****** Object:  Trigger [dbo].[AdddRecordIB_CommissionWallet]    Script Date: 4/13/2025 11:14:23 AM ******/
     // SET ANSI_NULLS ON
@@ -1092,25 +1090,33 @@ const tri_AdddRecordIB_CommissionWallet = async (comm) => {
 
 let settingList = {};
 const getSeting = async () => {
-    //     
-    //ALTER TABLE [Setting] ADD auto_generate_commission_min varchar(10);
-    let sql = ` SELECT Setting_id, Check_KYC_on, Wallet_to_Wallet_Transfer, Account_to_Account, Wallet_to_Account, Account_to_Wallet, Default_Tradersroom_Workspace, Allow_Withdraw_when_Trade_Open, blockEmailPhone, totalNoOfAccountOpen, Type, Is_Auto_Gen_Account, Signup_Type, account_series, AutoDeposit, Enable_Wallet, minimum_withdrawal, 
+
+    try {
+
+        //     
+        //ALTER TABLE [Setting] ADD auto_generate_commission_min varchar(10);
+        let sql = ` SELECT Setting_id, Check_KYC_on, Wallet_to_Wallet_Transfer, Account_to_Account, Wallet_to_Account, Account_to_Wallet, Default_Tradersroom_Workspace, Allow_Withdraw_when_Trade_Open, blockEmailPhone, totalNoOfAccountOpen, Type, Is_Auto_Gen_Account, Signup_Type, account_series, AutoDeposit, Enable_Wallet, minimum_withdrawal, 
     open_account_on_kyc, auto_generate_commission_min
      FROM [Setting] Where Setting_id = 1`;
-    let pool = await poolPromise;
-    const result = await pool.request().query(sql);
-    // console.log("getSeting", result.recordset);
-    // result.recordset[0].auto_generate_commission_min = 300;
-    settingList = result.recordset[0];
+        let pool = await poolPromise;
+        const result = await pool.request().query(sql);
+        result.recordset[0].auto_generate_commission_min = 300;
+        settingList = result.recordset[0];
 
-    console.log("settingList", settingList.auto_generate_commission_min);
-    if (settingList?.auto_generate_commission_min)
-        startCommissionScheduler('min', settingList.auto_generate_commission_min); // Runs every 5 minutes
+        if (settingList?.auto_generate_commission_min)
+            startCommissionScheduler('min', settingList.auto_generate_commission_min); // Runs every 5 minutes
+        else
+            console.log(`auto_generate_commission_min not found in settingList - ${settingList?.auto_generate_commission_min} Min`);
 
-    return result.recordset[0];
+        return result.recordset[0];
+    } catch (error) {
+        console.error("Error fetching setting:", error.message);
+        return null;
+
+    }
 }
 
-getSeting()
+// getSeting()
 
 
 
@@ -1138,11 +1144,9 @@ const addTrades_Commission = async (objectArray) => {
         `;
 
         try {
-            console.log("addTrades_Commission", sql);
             const pool = await poolPromise;
             const request = pool.request();
             let rr = await request.query(sql);
-            console.log("addTrades_Commission", rr);
         } catch (error) {
             console.error("Error adding commission date:", error.message);
         }
@@ -1178,7 +1182,6 @@ const Trades_CommissionDateWish = async (params) => {
     }
     let pool = await poolPromise;
     const result = await pool.request().query(sql);
-    // console.log("Trades_CommissionDateWish", result.recordset.length);
     let summary = result.recordset.reduce((acc, curr) => {
         acc.total_trade += curr.total_trade;
         acc.total_lot += curr.total_lot;
@@ -1237,15 +1240,17 @@ const IBTrades_CommissionDateWish = async (params) => {
     row = row.filter((data) => data.Level != 1);
     let Trader_Ids = row.map(data => data.Trader_Id);
 
-    if(Trader_Ids.length == 0){
-        return { response: [], summary: {
-            total_trade: 0,
-            total_lot: 0,
-            total_amount: 0,
-            total_profit: 0,
-            total_loss: 0,
-            total_commission: 0
-        } };
+    if (Trader_Ids.length == 0) {
+        return {
+            response: [], summary: {
+                total_trade: 0,
+                total_lot: 0,
+                total_amount: 0,
+                total_profit: 0,
+                total_loss: 0,
+                total_commission: 0
+            }
+        };
 
     }
 
@@ -1270,8 +1275,6 @@ const IBTrades_CommissionDateWish = async (params) => {
     }
     const result = await pool.request().query(sql);
 
-    console.log("IBTrades_CommissionDateWish", result.recordset);
-
     let resultIB2 = row.map(data => {
 
         let trader = result.recordset.find(trader => trader.traderId == data.Trader_Id);
@@ -1285,7 +1288,6 @@ const IBTrades_CommissionDateWish = async (params) => {
 
     // sort by level
     resultIB2.sort((a, b) => a.Level - b.Level);
-    console.log("resultIB2", resultIB2);
 
     let summary = result.recordset.reduce((acc, curr) => {
         acc.total_trade += curr.total_trade;
@@ -1304,10 +1306,12 @@ const IBTrades_CommissionDateWish = async (params) => {
         total_commission: 0
     });
 
-    console.log("summary", summary);
     return { response: resultIB2, summary: summary };
 
 
 }
 
-module.exports = { generateCommition, processIBCommission, GenerateCommissionByDate, GenerateCommissionByToDate, tri_IBCommission, Trades_CommissionDateWish, IBTrades_CommissionDateWish }
+module.exports = {
+    getSeting,
+    generateCommition, generateCommitionAPI, processIBCommission, GenerateCommissionByDate, GenerateCommissionByToDate, tri_IBCommission, Trades_CommissionDateWish, IBTrades_CommissionDateWish
+}

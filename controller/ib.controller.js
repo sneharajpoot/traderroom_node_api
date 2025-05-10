@@ -41,20 +41,19 @@ const getRecursiveData = async (traderId, page = 1, limit = 10) => {
         // let info = await getUserInfo(Accounts );
         let info = await trApi.getUserInfo(Accounts);
 
+        ////    PENDING = 0,   REJECT = 2,   APPROVE = 1
         let sql1 = `  SELECT  MT5Account,
         SUM(CASE WHEN Deposit_Withdraw = 0 THEN Amount ELSE 0 END) AS Total_Deposit,
         SUM(CASE WHEN Deposit_Withdraw = 1 THEN Amount ELSE 0 END) AS Total_Withdraw
-        FROM Wallet_AutoManualPayment
-        WHERE MT5Account IN (${Accounts}) GROUP BY MT5Account; `;
+        FROM Wallet_AutoManualPayment  
+        WHERE MT5Account IN (${Accounts}) AND Status = 1  GROUP BY MT5Account; `;
 
-        // console.log("sql1", sql1)
 
         let DW = await pool.request().query(sql1);
 
         // [info, DW ]= await Promise.all[info, DW];
         let DW_Data = DW.recordset;
         // 605871, 605887, 605890, 605892, 605893, 605944, 605945,
-        // console.log('-->', info)
         row = row.map(data => {
             data.DW_Data = DW_Data.find(d => d.MT5Account == data.Account)
 
@@ -78,7 +77,16 @@ const getRecursiveData = async (traderId, page = 1, limit = 10) => {
 
             }
             return ress;
-        })
+        });
+
+        // order by Level/
+        row = row.sort((a, b) => {
+            if (a.Level === b.Level) {
+                return a.Trader_Id - b.Trader_Id; // Sort by Trader_Id if Level is the same
+            }
+            return a.Level - b.Level; // Sort by Level
+        });
+
 
         // {id_name:'', ib_code:'',account:'', Profit:'', Commission:'', Balance:'', total_deposit:0, total_withdral:0 }
         // console.log('Query Result:', result.recordset); // Output the results

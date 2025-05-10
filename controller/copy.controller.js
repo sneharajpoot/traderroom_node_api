@@ -322,7 +322,6 @@ exports.enableSubscription = async (data) => {
             WHERE  [MasterAccountNumber] = ${data.masterAccountNumber}  ; 
          
     `);
-        console.log("mres", mres)
 
         return result;
 
@@ -502,14 +501,12 @@ exports.updateUser = async (data) => {
  */
 exports.removeUser = async (userid) => {
     let resu =  await removeUser({userid});
-    console.log("resu", resu)
 
     // update in Copy_Slave
     const pool = await poolPromise;
     const request = pool.request();
     let usql = ` UPDATE [dbo].[Copy_Slave] SET [IsDelete] = 1 WHERE [LoginId] = ${userid} `;
     let ures = await request.query(usql);
-    console.log("ures", ures)
 
     return ures;
 };
@@ -575,9 +572,7 @@ exports.addPerformance = async (data) => {
             ('${data.Name}', '${data.Time}', ${data.IncPercent}, ${data.IncUsd}, ${data.WinRate}, ${data.AUM}, ${data.TraderId}, '${data.MasterAccount}')
         `;
 
-        console.log("sql", sql);
         let result = await request.query(sql);
-        console.log("result", result);
 
         return { result: true, message: 'Record added successfully', response: result };
     } catch (error) {
@@ -602,9 +597,7 @@ exports.updatePerformance = async (TraderId, data) => {
         WHERE [TraderId] = ${TraderId}
         `;
 
-        console.log("sql", sql);
         let result = await request.query(sql);
-        console.log("result", result);
 
         return { result: true, message: 'Record updated successfully', response: result };
     } catch (error) {
