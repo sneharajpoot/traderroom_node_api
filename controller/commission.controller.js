@@ -6,7 +6,10 @@ const moment = require('moment'); // or use native Date
 
 const getLastToTimestampFromDB = async () => {
 
-    let sql = "SELECT TOP 1 Commission_Date_Id,	From_Date,	To_Date,	Active,	isdelete,	create_on,	no_of_account,	no_of_trade FROM [IB_Commission_Gen_Date] ORDER BY Commission_Date_Id DESC";
+    let sql = `SELECT TOP 1 Commission_Date_Id,	From_Date,	To_Date,	Active,	isdelete,	create_on,	no_of_account,	no_of_trade 
+    FROM [IB_Commission_Gen_Date] 
+    Where Active =1  
+    ORDER BY Commission_Date_Id DESC`;
     const pool = await poolPromise;
 
     const result = await pool.request().query(sql);
@@ -30,7 +33,7 @@ const getIntervalMs = (type, value) => {
 };
 // Main scheduler
 
-// isRunningCommitionGen: Boolean = false; 
+let isRunningCommitionGen = false;
 // // YYYY-MM-DD HH:mm:ss
 const generateCommitionAPI = async (toTimestamp) => {
 
@@ -74,10 +77,6 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
 
 
     const fromTimestamp = await getLastToTimestampFromDB();
-    // current Global time to time stemp
-    // const toTimestamp = moment().format('YYYY-MM-DD HH:mm:ss'); 
-
-    // const toTimestamp = moment().utc().format('YYYY-MM-DD HH:mm:ss');
 
     let sTime = await managerApi.TimeServer();
 
@@ -85,10 +84,6 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
         console.error("Invalid interval specified. Please provide a valid type and value.");
         return;
     }
-    // console.log("sTime", sTime, moment(sTime*1000).toLocaleString(),  moment(sTime*1000)); // Convert to UTC
-    // console.log("sTime", new Date(sTime*1000)); // Convert to UTC
-    // console.log("dayjs", dayjs(sTime*1000).format('YYYY-MM-DD HH:mm:ss')); // Convert to UTC
-
     const timestamp = sTime * 1000;
     const date = new Date(timestamp);
 
@@ -106,13 +101,15 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
     const toTimestamp = formattedUTC;// moment(sTime*1000).format('YYYY-MM-DD HH:mm:ss'); 
     // console.log("toTimestamp", toTimestamp);
 
-    console.log("First From Date: ", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ----To Date: ', toTimestamp);
+    // console.log("First From Date: ", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ----To Date: ', toTimestamp);
+    console.log("First From Date: ", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ----To Date: ', toTimestamp, 'intervalMs', value, ' Min');
+
     let col = {
         From_Date: moment(fromTimestamp).format('YYYY-MM-DD HH:mm:ss'),
         To_Date: toTimestamp,
         Active: 1
     }
-    let res = await GenerateCommissionByDateNewBatch(col.From_Date, col.To_Date);
+    // let res = await GenerateCommissionByDateNewBatch(col.From_Date, col.To_Date);
 
     setInterval(async () => {
         // while (true) {
@@ -133,20 +130,23 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
             String(date.getUTCSeconds()).padStart(2, '0');
 
         console.log('formattedUTC----', formattedUTC);
-        const toTimestamp = formattedUTC;//moment(sTime*1000).format('YYYY-MM-DD hh:mm:ss');
+        const toTimestamp = formattedUTC;
+        //moment(sTime*1000).format('YYYY-MM-DD hh:mm:ss');
         //const toTimestamp = moment();
 
         //   fromDate: fD.format('YYYY-MM-DD') + ' 00:00:00',
         //   toDate: TD.format('YYYY-MM-DD') + ' 23:59:59',
 
-        console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
+        // console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp);
+        console.log("fromDate, toDate", moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'), ' ---- ', toTimestamp, value, ' Min');
+
         let res = await GenerateCommissionByDateNewBatch(fromTimestamp, toTimestamp);
 
-        let col = {
-            From_Date: moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'),
-            To_Date: toTimestamp,//.format('YYYY-MM-DD hh:mm:ss'),
-            Active: 1
-        }
+        // let col = {
+        //     From_Date: moment(fromTimestamp).format('YYYY-MM-DD hh:mm:ss'),
+        //     To_Date: toTimestamp,//.format('YYYY-MM-DD hh:mm:ss'),
+        //     Active: 1
+        // }
         // let resAddComm = await AddIBCommissionDate_Object(col);
 
         // console.log("resAddComm", resAddComm)
@@ -154,98 +154,18 @@ const startCommissionScheduler = async (type = 'min', value = 1) => {
     }, intervalMs);
 };
 
-const GenerateCommissionByDateNew = async (fromTimestemp, toTimestemp) => {
-
-    try {
-
-        isRunningCommitionGen = true;
-        // console.log("GenerateCommissionByDate", fromTimestemp, toTimestemp);
-        let res = {};
-
-        let gr = await managerApi.GetGroups();
-
-        // console.log('Group', gr);
-
-        if (gr.lstGroups.Count <= 0) {
-            res.result = false;
-            res.Message = " Unable to connect manager.";
-
-            return res;
-        }
-
-        const isfromDate = await isDateExists(fromTimestemp)
-        const istoDate = await isDateExists(toTimestemp)
-        let col = {
-            From_Date: fromTimestemp,
-            To_Date: toTimestemp,
-            Active: 1
-        }
-
-
-        let sql = " SELECT p.Trader_Id ,p.Email,p.Reffered_By,p.Reffered_By_Account,pa.Account, " +
-            " pa.IBCommissionPlans   " +
-            " FROM dbo.Profiles as p " +
-            " join MT5_Profile_Account as pa on p.Trader_Id = pa.Trader_Id   " +
-            // " Where Reffered_By_Account!= 0  and Status=1 and Account = 629131";
-            " Where Reffered_By_Account!= 0  and Status=1  ";
-
-        let pool = await poolPromise;
-        const result = await pool.request().query(sql);
-        let dt = result.recordset;
-
-        console.log("IB Accounts", dt.length);
-
-        col.no_of_account = dt.length;
-        col.no_of_trade = 0;
-
-        let Accounts = {}
-        Accounts = dt.reduce((acc, item) => {
-            acc[item.Account] = item.Trader_Id
-            return acc;
-        }, Accounts);
-
-        //Object.keys(Accounts)
-        // let AccountsList = Object.keys(Accounts) 
-
-        // get close commition
-        let clt = await GetCloseTradeAllAccount(Object.keys(Accounts), fromTimestemp, toTimestemp);
-        // console.log('Proccess Start :' + i + " Account", Account, ' | lstCLOSE', clt.lstCLOSE.length, ' Trader_Id:', Trader_Id, 'Time:', fromTimestemp, ' - ', toTimestemp, ' -- Proccess End');
-        console.log("Proccess Star Accounts ", Object.keys(Accounts), ' | lstCLOSE', clt.lstCLOSE.length, 'Time:', fromTimestemp, ' - ', toTimestemp);
-        if (clt.lstCLOSE.length > 0) {
-
-            col.no_of_trade += clt.lstCLOSE.Count;
-
-            clt.lstCLOSE = clt.lstCLOSE.map(data => { data.Trader_Id = Accounts[data.Account]; return data; });
-
-            res = CommissionTadeADD(clt.lstCLOSE);
-
-        }
-        console.log("Proccess End Accounts ", Object.keys(Accounts), ' | lstCLOSE', clt.lstCLOSE.length, 'Time:', fromTimestemp, ' - ', toTimestemp);
-
-        let resAddComm = await AddIBCommissionDate_Object(col);
-        if (resAddComm.result == false) {
-            res.result = false;
-            res.Message = "Unable to add commission date";
-            // console.log("Unable to add commission date", resAddComm.Message);
-            // return res;
-        }
-        console.log('Add Commossion Date : Time:', fromTimestemp, ' - ', toTimestemp, '  Proccess End');
-
-        isRunningCommitionGen = false;
-        return true;
-
-    } catch (error) {
-        console.error("Error in GenerateCommissionByDate:", error);
-        return { result: false, message: error.message };
-
-    }
-
-
-}
+ 
 
 const GenerateCommissionByDateNewBatch = async (fromTimestemp, toTimestemp) => {
 
     try {
+        const Commi_Start_Date = moment().utc().format('YYYY-MM-DD HH:mm:ss');
+        // const Commi_End_Date = new Date();
+
+        if (isRunningCommitionGen) {
+            console.log("Already running commission generation");
+            return { result: false, message: "Already running commission generation" };
+        }
 
         isRunningCommitionGen = true;
         // console.log("GenerateCommissionByDate", fromTimestemp, toTimestemp);
@@ -267,7 +187,9 @@ const GenerateCommissionByDateNewBatch = async (fromTimestemp, toTimestemp) => {
         let col = {
             From_Date: fromTimestemp,
             To_Date: toTimestemp,
-            Active: 1
+            Active: 1,
+            Commi_Start_Date: null,
+            Commi_End_Date: null
         }
 
 
@@ -293,58 +215,52 @@ const GenerateCommissionByDateNewBatch = async (fromTimestemp, toTimestemp) => {
             return acc;
         }, Accounts);
 
-        //Object.keys(Accounts)
         let AccountsList = Object.keys(Accounts);
-        // let AccountsList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10,11]; // Example list of accounts;
 
-        const BatchCount = 20;
-
+        const BatchCount = 10; // Number of accounts to process in each batch
+        let total_comission = 0;
         console.log(`Processing accounts in batches of ${BatchCount}...`);
         for (let i = 0; i < AccountsList.length; i += BatchCount) {
             let batch = AccountsList.slice(i, i + BatchCount); // Get a batch of 10 accounts
-            console.log(`Processing batch:${i} - ${batch}`);
+            console.log(`Processing batch:${i+1} - ${batch}`);
 
-            // Call GetCloseTradeAllAccount for the current batch
-            // let clt = await GetCloseTradeAllAccount(batch, fromTimestemp, toTimestemp);
+            // Call GetCloseTradeAllAccountWithoutOpenPrice for the current batch
+            let clt = await GetCloseTradeAllAccountWithoutOpenPrice(batch, fromTimestemp, toTimestemp);
 
-            // console.log(
-            //     `Processed batch: ${i} - ${batch} | lstCLOSE: ${clt.lstCLOSE.length} | Time: ${fromTimestemp} - ${toTimestemp}`
-            // );
+            console.log(
+                `Processed batch: ${i+1} - ${batch} | lstCLOSE: ${clt.lstCLOSE.length} | Time: ${fromTimestemp} - ${toTimestemp}`
+            );
 
-            // if (clt.lstCLOSE.length > 0) {
-            //     col.no_of_trade += clt.lstCLOSE.length;
+            if (clt.lstCLOSE.length > 0) {
+                col.no_of_trade += clt.lstCLOSE.length;
 
-            //     // Map Trader_Id to each trade
-            //     clt.lstCLOSE = clt.lstCLOSE.map(data => {
-            //         data.Trader_Id = Accounts[data.Account];
-            //         return data;
-            //     });
+                // Map Trader_Id to each trade
+                clt.lstCLOSE = clt.lstCLOSE.map(data => {
+                    data.Trader_Id = Accounts[data.MT5Account];
+                    return data;
+                });
 
-            //     res = await CommissionTadeADD(clt.lstCLOSE);
-            // }
+                res = await CommissionTadeADD(clt.lstCLOSE);
+                // { 
+                    total_comission += res.total_comission;
+                    Lot = res.Lot
+                // }
+            }
         }
+ 
+        col.Commi_Start_Date = Commi_Start_Date;
+        col.Commi_End_Date = moment().utc().format('YYYY-MM-DD HH:mm:ss');
+        // total_comission
+        // Lot
 
-        // // get close commition
-        // let clt = await GetCloseTradeAllAccount(Object.keys(Accounts), fromTimestemp, toTimestemp);
-        // // console.log('Proccess Start :' + i + " Account", Account, ' | lstCLOSE', clt.lstCLOSE.length, ' Trader_Id:', Trader_Id, 'Time:', fromTimestemp, ' - ', toTimestemp, ' -- Proccess End');
-        // console.log("Proccess Star Accounts ", Object.keys(Accounts), ' | lstCLOSE', clt.lstCLOSE.length, 'Time:', fromTimestemp, ' - ', toTimestemp);
-        // if (clt.lstCLOSE.length > 0) {
-
-        //     col.no_of_trade += clt.lstCLOSE.Count;
-
-        //     clt.lstCLOSE = clt.lstCLOSE.map(data => { data.Trader_Id = Accounts[data.Account]; return data; });
-
-        //     res = CommissionTadeADD(clt.lstCLOSE);
-
-        // }
-        // console.log("Proccess End Accounts ", Object.keys(Accounts), ' | lstCLOSE', clt.lstCLOSE.length, 'Time:', fromTimestemp, ' - ', toTimestemp);
-
+        col.no_of_account = AccountsList.length;
+        // col.no_of_trade = 0; total_comission
+        col.total_comission = total_comission;
         let resAddComm = await AddIBCommissionDate_Object(col);
         if (resAddComm.result == false) {
             res.result = false;
             res.Message = "Unable to add commission date";
-            // console.log("Unable to add commission date", resAddComm.Message);
-            // return res;
+            console.log("Unable to add commission date", resAddComm.Message);
         }
         console.log('Add Commossion Date : Time:', fromTimestemp, ' - ', toTimestemp, '  Proccess End');
 
@@ -352,6 +268,7 @@ const GenerateCommissionByDateNewBatch = async (fromTimestemp, toTimestemp) => {
         return true;
 
     } catch (error) {
+        isRunningCommitionGen = false;
         console.error("Error in GenerateCommissionByDate:", error);
         return { result: false, message: error.message };
 
@@ -373,12 +290,15 @@ const CommissionTadeADD = async (col) => {
 
     let sql = "";
 
+    let total_comission = 0;
+    let Lot = 0;
     try {
 
         const pool = await poolPromise;
         const request = pool.request();
 
         let object = [];
+
 
         for (let i = 0; i < col.length; i++) {
             if (col[i].Symbol != "" && col[i].Symbol != null) {
@@ -398,6 +318,8 @@ const CommissionTadeADD = async (col) => {
 
                 try {
 
+                    // continue;
+
                     let res = await request.query(sql);
                     console.log("Add in DB", '[' + (i + 1) + ' of ' + col.length + ']', res.rowsAffected[0]);
 
@@ -411,12 +333,20 @@ const CommissionTadeADD = async (col) => {
                         total_loss: col[i].Profit < 0 ? col[i].Profit : 0,
                     })
 
-                    await tri_IBCommission(col[i]);
+                    let resID = await tri_IBCommission(col[i]);
+
+                    total_comission += resID.total_comission,
+                    Lot += resID.Lot
                 } catch (error) {
                     console.error("Add in DB", '[' + (i + 1) + ' of ' + col.length + ']', 'MT5Account: ' + col[i].MT5Account, ' Ticket:' + col[i].Ticket, error.message);
                 }
             }
+
         }
+        // return {
+        //     total_comission: total_comission,
+        //     Lot: Lot
+        // }
     }
     catch (ex) {
         logs("Exception: Add Trade in DB:  " + ex.Message + ", Count : " + col.Count + "MT5Account: " + col[0].MT5Account);
@@ -426,22 +356,28 @@ const CommissionTadeADD = async (col) => {
         res.Message = ex.Message + " " + sql;
     }
 
+    res = {
+        total_comission: total_comission,
+        Lot: Lot,...res}
     return res;
 }
 
 
-const GetCloseTradeAllAccount = async (Account, fromDate, toDate) => {
-    let res = await trApi.GetCloseTradeAllAccount(Account, fromDate, toDate);
+const GetCloseTradeAllAccountWithoutOpenPrice = async (Account, fromDate, toDate) => {
+    let res = await trApi.GetCloseTradeAllAccountWithoutOpenPrice(Account, fromDate, toDate);
     return res;
 }
 
 const AddIBCommissionDate_Object = async (data) => {
-    let sql = " INSERT INTO [IB_Commission_Gen_Date]" +
-        " ([From_Date],[To_Date] ,[Active])" +
-        " VALUES" +
-        " ('" + data.From_Date + "','" + data.To_Date + "','" + data.Active + "')";
+    let sql = ` INSERT INTO [IB_Commission_Gen_Date] 
+         ([From_Date],[To_Date] ,[Active], Commi_Start_Date, Commi_End_Date, total_comission, no_of_trade, no_of_account)
+        VALUES
+         ('${ data.From_Date}','${ data.To_Date}','${ data.Active}', '${ data.Commi_Start_Date}', '${ data.Commi_End_Date}',  
+         ${ data.total_comission}, '${data.no_of_trade}', '${ data.no_of_account}' ); `;
     let res = {};
     try {
+
+
         const pool = await poolPromise;
         const request = pool.request();
         let rr = await request.query(sql);
@@ -671,10 +607,13 @@ const tri_IBCommission = async (trade) => {
                     }
                     // END
                 }
-                let sql10 = `UPDATE IB_Commission_Gen_Date SET total_comission = ${_total_comission} WHERE Commission_Date_Id = (SELECT MAX(Commission_Date_Id) FROM IB_Commission_Gen_Date);`;
 
 
-                const upIB_Commission_Gen_Date = await pool.request().query(sql10);
+
+                // let sql10 = `UPDATE IB_Commission_Gen_Date SET total_comission = ${total_comission} WHERE Commission_Date_Id = (SELECT MAX(Commission_Date_Id) FROM IB_Commission_Gen_Date);`;
+
+
+                // const upIB_Commission_Gen_Date = await pool.request().query(sql10);
 
                 let object = {
                     traderId: cTrade.Trader_Id,
@@ -687,6 +626,11 @@ const tri_IBCommission = async (trade) => {
                     total_loss: cTrade.Profit < 0 ? cTrade.Profit : 0,
                 };
                 await addTrades_Commission([object])
+
+                return {
+                    total_comission: _total_comission,
+                    Lot: cTrade.Lot
+                }
 
             }
 
@@ -738,11 +682,12 @@ const tri_AdddRecordIB_CommissionWallet = async (comm) => {
         ,CONCAT('Auto generate Commission ',${_SourceAccount}),1,(select GETDATE()) );`;
 
         const inrtComm = await pool.request().query(sql12);
-        console.log("Add in IB_Commission_Wallet", _Trader_Id, _Source, _Ticket, inrtComm.rowsAffected[0]);
+        // console.log("Add in IB_Commission_Wallet", _Trader_Id, _Source, _Ticket, inrtComm.rowsAffected[0]);
     }
 
     if (_BlockCommition == 1) {
         let sql13 = `update IB_Commission set commition_generated = 0 where Commission_Id = ${_Commission_Id};`;
+        console.log(" _BlockCommition", _Trader_Id, _Source, _Ticket);
         const inrtComm = await pool.request().query(sql13);
     }
 }
@@ -758,7 +703,7 @@ const getSeting = async () => {
      FROM [Setting] Where Setting_id = 1`;
         let pool = await poolPromise;
         const result = await pool.request().query(sql);
-        result.recordset[0].auto_generate_commission_min = 300;
+        // result.recordset[0].auto_generate_commission_min = 300;
         settingList = result.recordset[0];
 
         if (settingList?.auto_generate_commission_min)

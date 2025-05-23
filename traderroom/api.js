@@ -218,9 +218,33 @@ const GetCloseTradeAllAccount = async (lstAccount, _StartTm, _EndTm) => {
         throw error;
     }
 }
+const GetCloseTradeAllAccountWithoutOpenPrice  = async (lstAccount, _StartTm, _EndTm) => {
+    try {
+        // API URL
+        const url = `${rootUrl}/GetCloseTradeAllAccount`; // Replace with your actual API URL
 
+        // Request headers
+        const headers = {
+            'x-token': '1000', // Replace with your x-token value
+            'type': 1,
+            'Content-Type': 'application/json'
+        };
+
+        // Request params (if lstAccount is a list of account numbers)
+        const queryParams = `?lstAccount=${lstAccount.join(',')}&_StartTm=${_StartTm}&_EndTm=${_EndTm}`;
+
+        // Make the GET request
+        const response = await axios.get(url + queryParams, { headers });
+
+        // Log and return the response
+        return response.data;
+    } catch (error) {
+        console.error('Error calling GetUserInfoAll API:', error.message);
+        throw error;
+    }
+}
 module.exports = { getUserInfo, GetUserInfoByAccountList, GetOpenTradeByUsers, getOpenTrade, GetOpenTrade, getUsersOpenTradeNew,
-    GetCloseTrade, GetCloseTradeAllAccount 
+    GetCloseTrade, GetCloseTradeAllAccount, GetCloseTradeAllAccountWithoutOpenPrice 
  };
 
 // Example usage
